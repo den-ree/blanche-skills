@@ -1,0 +1,41 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "bindify-skill",
+  "version": "1.0.0",
+  "owner": {
+    "name": "Den Ree"
+  },
+  "metadata": {
+    "description": "Coordinate AI agents on software work with a filesystem-based brief → propose → plan → apply → verify pipeline."
+  },
+  "plugins": [
+    {
+      "name": "bindify",
+      "description": "Filesystem-based protocol for coordinating AI agents on software work. Defines .bindify/ folder layout, the plan pipeline, templates, and six commands for orchestrator and executor agents.",
+      "repository": "https://github.com/den-ree/bindify-skill",
+      "version": "1.0.0",
+      "author": {
+        "name": "Den Ree"
+      },
+      "license": "MIT",
+      "category": "development",
+      "keywords": [
+        "bindify",
+        "agent-skills",
+        "multi-agent",
+        "planning",
+        "orchestration",
+        "markdown",
+        "ai-agents"
+      ],
+      "tags": [
+        "bindify",
+        "agent-skills",
+        "multi-agent",
+        "planning",
+        "orchestration"
+      ],
+      "source": "./"
+    }
+  ]
+}

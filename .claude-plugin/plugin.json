@@ -1,0 +1,25 @@
+{
+  "name": "bindify",
+  "version": "1.0.0",
+  "description": "Filesystem-based protocol for coordinating AI agents on software work via structured markdown in .bindify/ folders.",
+  "author": {
+    "name": "Den Ree"
+  },
+  "repository": "https://github.com/den-ree/bindify-skill",
+  "license": "MIT",
+  "keywords": [
+    "bindify",
+    "agent-skills",
+    "multi-agent",
+    "planning",
+    "orchestration",
+    "markdown",
+    "ai-agents",
+    "cursor",
+    "claude",
+    "pi"
+  ],
+  "skills": [
+    "./bindify"
+  ]
+}
