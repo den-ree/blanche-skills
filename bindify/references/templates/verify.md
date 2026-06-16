@@ -53,3 +53,11 @@ _List anything that needs follow-up. Each issue should become a new entry in `fi
 
 - [ ] Issue: ...  
   → Action: ...
+
+---
+
+## Related
+
+- `[[plan.md]]`
+- `[[updates.md]]`
+- `[[../coordinator.md]]`

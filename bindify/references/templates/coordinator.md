@@ -46,3 +46,11 @@ _What the human intends to do next — start a plan, review a proposal, run a st
 ---
 
 <!-- Add older entries below as new sessions happen -->
+
+---
+
+## Related
+
+- `[[plans/<plan-name>/brief.md]]`
+- `[[plans/<plan-name>/proposal.md]]`
+- `[[plans/<plan-name>/plan.md]]`

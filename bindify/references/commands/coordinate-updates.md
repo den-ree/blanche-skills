@@ -104,3 +104,9 @@ Run this when `coordinator.md` already exists.
 ```
 .bindify/development/<category>/<feature-name>/coordinator.md
 ```
+
+---
+
+## Post-step
+
+After writing `coordinator.md`, run `update-links` for the feature/plan context so related docs stay connected via `[[wiki-links]]` and `## Related` backlinks.

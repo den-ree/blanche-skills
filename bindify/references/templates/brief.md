@@ -59,3 +59,10 @@ _How will we know this plan is done? What should be true after verify._
 _Anything unresolved that the proposal phase should address or decide._
 
 - ?
+
+---
+
+## Related
+
+- `[[proposal.md]]`
+- `[[plan.md]]`

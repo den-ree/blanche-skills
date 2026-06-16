@@ -32,6 +32,7 @@ Read `updates.md` for a completed plan and generate a `verify.md` human review c
    - Group entries by the step they came from
 4. Read `PATH_TO_BRIEF_MD` — extract success criteria for the overall checklist
 5. Write `verify.md` to the plan folder using the template structure
+6. Run `update-links` for the current plan folder
 
 ---
 

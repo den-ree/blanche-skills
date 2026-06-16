@@ -63,3 +63,11 @@ _Any steps added, removed, or reordered._
 
 **Notes for the agent:**
 _Any additional context or constraints to carry into apply phase._
+
+---
+
+## Related
+
+- `[[brief.md]]`
+- `[[plan.md]]`
+- `[[updates.md]]`

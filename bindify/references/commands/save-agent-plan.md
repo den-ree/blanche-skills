@@ -1,14 +1,14 @@
 # Command: save-agent-plan
 
-Generate and save a planning-mode plan from agent discussion outputs into the correct Bindify feature path.
+Generate and save `plan.md` from an approved `proposal.md` into the correct Bindify feature path.
 
 ---
 
 ## When to use
 
-- A planning discussion (human + agent, or multi-agent) is complete
-- The human wants the discussed approach captured as an executable plan file
-- A plan needs to be stored under the feature's `plans/` directory as a `.md` file
+- A proposal was reviewed by a human and approved
+- The team is ready to transform proposal steps into executable plan steps
+- A source-of-truth `plan.md` is needed for `iterate-planning-mode`
 
 ---
 
@@ -19,7 +19,8 @@ Generate and save a planning-mode plan from agent discussion outputs into the co
 | `CATEGORY` | yes | `features` \| `fixes` \| `refactor` \| `chore` |
 | `FEATURE_NAME` | yes | Feature folder name in kebab-case |
 | `PLAN_NAME` | yes | Plan folder name in kebab-case |
-| `DISCUSSION_SOURCES` | yes | Planning context sources (conversation + agent planning outputs) |
+| `PATH_TO_PROPOSAL_MD` | yes | Repo-relative path to reviewed `proposal.md` |
+| `PATH_TO_BRIEF_MD` | no | Repo-relative path to `brief.md` (required when not inferable from proposal) |
 | `ALLOW_OVERWRITE` | no | `true` only when human explicitly approves replacing an existing `plan.md` |
 
 ---
@@ -49,18 +50,17 @@ Increment (`plan-v3.md`, `plan-v4.md`, ...) if needed.
    - Ensure output lands in the exact feature directory under `.bindify/development/`
    - If path is ambiguous, stop and ask the human
 
-2. Gather planning context
-   - Read all `DISCUSSION_SOURCES`
-   - Include both human intent and agent planning proposals
-   - Extract only decisions that were actually discussed
+2. Validate proposal approval
+   - Read `PATH_TO_PROPOSAL_MD` fully
+   - Confirm `Human review -> Decision` is `approved` or `approved with changes`
+   - If decision is missing, `rejected`, or ambiguous, stop and ask
 
-3. Build the discussion summary section
-   - Capture: problem framing, alternatives discussed, final approach, constraints, explicit trade-offs
-   - Keep concise (2-6 bullets)
-   - Do not include transcript-like raw chat
+3. Gather plan context
+   - Read proposal sections: `Approach`, `Options considered`, `Proposed steps`, `Risks and unknowns`
+   - Read `brief.md` when available for goals, constraints, and success criteria
 
 4. Generate the execution plan
-   - Convert approved discussion into actionable, ordered steps
+   - Convert approved proposal into actionable, ordered steps
    - Each step must include:
      - `Step ID`
      - `Goal`
@@ -75,6 +75,9 @@ Increment (`plan-v3.md`, `plan-v4.md`, ...) if needed.
    - Save plan to `plan.md` (or versioned fallback file per Output path rules)
    - Keep content plain markdown only
 
+6. Run link maintenance
+   - Invoke `update-links` for the current plan folder
+
 ---
 
 ## Required plan template
@@ -84,7 +87,7 @@ Increment (`plan-v3.md`, `plan-v4.md`, ...) if needed.
 
 **Feature:** `.bindify/development/<category>/<feature-name>/`
 **Plan Folder:** `plans/<plan-name>/`
-**Generated From:** planning-mode discussion (human + agents)
+**Generated From:** approved `proposal.md` (+ optional `brief.md`)
 **Date:** <YYYY-MM-DD>
 
 ## Discussion Summary
@@ -116,6 +119,11 @@ Increment (`plan-v3.md`, `plan-v4.md`, ...) if needed.
 
 ### Step-002: <title>
 ...
+
+## Related
+- `[[brief.md]]`
+- `[[proposal.md]]`
+- `[[updates.md]]`
 ```
 
 ---
@@ -123,18 +131,19 @@ Increment (`plan-v3.md`, `plan-v4.md`, ...) if needed.
 ## Guardrails
 
 - Use repo-relative paths only
-- Do not invent decisions not present in planning discussion
+- Do not invent decisions not present in approved proposal or brief
 - Do not include source code in `plan.md`
 - Do not execute implementation work in this command
 - Do not modify `updates.md` or `verify.md`
-- If required planning context is missing, stop and ask
+- If proposal approval state is missing or invalid, stop and ask
 
 ---
 
 ## Acceptance criteria
 
 - Plan file is saved under the correct feature path in `.bindify/development/<category>/<feature-name>/plans/<plan-name>/`
-- Includes a concise discussion summary explaining why the plan exists
+- Plan reflects approved proposal steps and review adjustments
 - Uses ordered, actionable steps with clear outputs and done criteria
 - Saved as a `.md` file (`plan.md` or versioned fallback when not overwriting)
 - Contains `Scope`, `Out of scope`, and `Risks/Assumptions`
+- `update-links` has run for the plan folder

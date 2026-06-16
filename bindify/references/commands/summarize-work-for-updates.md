@@ -39,6 +39,7 @@ Produce a compact, scannable summary of the latest implementation work and write
    - **Verify the path follows the naming convention**: `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md`
    - Do not create `updates/` directories or per-step markdown files.
    - Do not rewrite or reformat existing content outside the new section.
+   - After writing, run `update-links` for the current plan folder.
 
 ## Output Format (for `target_md_path`)
 ```markdown
