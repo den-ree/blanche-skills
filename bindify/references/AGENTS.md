@@ -19,3 +19,4 @@ Use this file as a quick entry point, not as the full specification.
 1. `SKILL.md`
 2. Current feature `coordinator.md` (if present)
 3. Relevant `brief.md` / `proposal.md` / `plan.md` for the active workflow step
+4. `references/docs/workflow.md` — when branch strategy or doc linking is unclear
