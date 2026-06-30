@@ -11,7 +11,7 @@ Read this whole file when bindify is in play; load command/template files from `
 
 ## When to invoke each command
 
-Eleven commands drive bindify. Each one is a self-contained markdown file in `references/commands/`. Read the full command file before executing it.
+Thirteen commands drive bindify. Each one is a self-contained markdown file in `references/commands/`. Read the full command file before executing it.
 
 | User signal | Command | Reference file |
 |---|---|---|
@@ -22,6 +22,9 @@ Eleven commands drive bindify. Each one is a self-contained markdown file in `re
 | "/bindify" / "publish this plan branch" | `publish-plan` | `references/commands/publish-plan.md` |
 | "run step N" / "execute Step-003" / orchestrator delegating a step | `iterate-planning-mode` | `references/commands/iterate-planning-mode.md` |
 | Right after a step finishes, before moving on | `summarize-work-for-updates` | `references/commands/summarize-work-for-updates.md` |
+| "scan the architecture" / "build the architecture map" / missing arch object | `scan-architecture` | `references/commands/scan-architecture.md` |
+| "log this PR" / ingest a PR into the tracking history | `log-pr` | `references/commands/log-pr.md` |
+| "open a bindify PR" / publish logs to the `.bindify` submodule | `publish-bindify-pr` | `references/commands/publish-bindify-pr.md` |
 | All steps done, ready for human review | `generate-verify` | `references/commands/generate-verify.md` |
 | "research the codebase" before proposing | `research-codebase` | `references/commands/research-codebase.md` |
 | "repair links/backlinks after edits" | `update-links` | `references/commands/update-links.md` |
@@ -88,8 +91,14 @@ Alongside this pipeline, `coordinator.md` runs in parallel as a conversation jou
 .bindify/
 ├── AGENTS.md                          ← root instructions for any agent entering the repo
 ├── commands/                          ← canonical command specs
-├── templates/                         ← brief, proposal, coordinator, verify, hotfixes templates
+├── templates/                         ← brief, proposal, coordinator, verify, hotfixes, architecture templates
 ├── docs/                              ← cross-feature reference docs (event schemas, etc.)
+├── architecture/                      ← the architecture object graph (Capacities-style)
+│   ├── _map.md                        ← high-level skeleton + object index
+│   ├── system/<name>.md               ← type: system
+│   ├── modules/<name>.md              ← type: module | service | integration
+│   ├── data/<name>.md                 ← type: data-model
+│   └── standards/<name>.md            ← type: standard | pattern
 └── development/
     ├── features/
     │   └── <feature-name>/
@@ -122,9 +131,42 @@ Alongside this pipeline, `coordinator.md` runs in parallel as a conversation jou
 | apply | `plan.md` + `updates.md` | AI via `iterate-planning-mode` |
 | verify | `verify.md` | human checklist |
 
+## Architecture object graph
+
+Bindify models the system itself as a web of typed **objects** under `.bindify/architecture/` — one markdown
+file per object, linked by `[[wiki-links]]`, browsable like Capacities. Markdown is the source of truth.
+
+Object types: `system`, `module`, `service`, `data-model`, `integration`, `pattern`, `standard`. Edges are
+derived from the **Depends on** (`depends-on`), **Used by** (`used-by`), and **Standards & patterns** (`follows`)
+sections of each object file.
+
+`scan-architecture` builds a small, reliable skeleton first (`bootstrap`), then fills it in incrementally
+(`fill`) as changes land. **Responsibility is stable; fill only appends change-log lines and adds edges.**
+
+## Logs connect changes to architecture
+
+A log is not a changelog. Every `updates.md` entry must carry an **Impact & Connections** section (abstract
+ripple effects — what else the change can affect) and an **Architecture** section (`[[wiki-links]]` to the
+objects it `created` / `modified` / `touches`). This is what turns the log into a connected graph instead of a
+flat history.
+
+## PR-driven logging flow
+
+Each PR is a unit of change. The vision flow:
+
+1. Human + agent plan a feature at a high level → `coordinator.md` + `brief.md` + `proposal.md`.
+2. Agent implements step 1 in planning mode → `plan.md` + `iterate-planning-mode`.
+3. New branch + PR; each iteration appends to a steps file attached to the PR.
+4. `log-pr` reads the PR (gh CLI → iterate steps file → git diff fallback), writes an architecture-aware,
+   impact-aware log with an **Alignment** assessment against `standard`/`pattern` objects, and runs
+   `scan-architecture fill`.
+5. `publish-bindify-pr` opens a PR to the `.bindify` submodule with the new logs + architecture updates.
+
 ## Hard rules
 
 - **Never modify `plan.md` during apply.** Execution state goes into `updates.md` only.
+- **Every update entry needs Impact & Connections + Architecture sections.** No flat changelogs.
+- **Architecture `Responsibility` is human-owned.** `scan-architecture fill` appends change-log lines and edges only — it never rewrites a responsibility.
 - **`updates.md` is append-only.** Initialize with a feature overview on first creation; never rewrite past entries.
 - **`hotfixes.md` is append-only.** Log unplanned fixes; do not rewrite history.
 - **Never introduce scope beyond the current step.** Note observations, don't act on them.
@@ -175,6 +217,6 @@ Pi discovers skills by walking up the directory tree, so the global one is found
 - `references/AGENTS.md` — concise entry-point rules for agents
 - `references/docs/workflow.md` — visual deep-dive (repo branches, link graph, orchestrator model)
 - `references/commands/<name>.md` — load on demand when invoking a command
-- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, or hotfix file
+- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, hotfix, or architecture object file
 
 When invoking a command, **read the full command file first**. The summaries in this skill are signposts, not substitutes.

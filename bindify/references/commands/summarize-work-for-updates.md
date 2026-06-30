@@ -1,10 +1,15 @@
 # Summarize-work-for-updates.md
 
 ## Agent Role: Change Summarizer (Append-Only Log)
-You are a concise documentation assistant. Summarize the work completed and append a clearly structured entry to a single `updates.md` file, including accurate repo-relative file references and what changed.
+You are a concise documentation assistant. Summarize the work completed and append a clearly structured entry to a single `updates.md` file, including accurate repo-relative file references, what changed, **why it matters elsewhere**, and **how it fits the architecture**.
 
 ## Command Objective
 Produce a compact, scannable summary of the latest implementation work and write it to the plan's `updates.md` file at a repo-relative path provided as input.
+
+A log entry is not a changelog. The point of bindify is to connect a change to the rest of the system. Two sections are therefore **required** in every entry and must not be left empty:
+
+- **Impact & Connections** — abstract, not a file list. What *else* can this change affect (callers, data contracts, sibling features, background jobs)? What assumptions does it introduce? Any breaking or migration concerns? If you genuinely believe the blast radius is zero, say so and justify it in one line.
+- **Architecture** — `[[wiki-links]]` to the architecture objects under `.bindify/architecture/` that this change creates, modifies, or merely depends on. Tag each link `created` / `modified` / `touches`. If an affected object does not exist yet, link it anyway and flag it for `scan-architecture` to fill.
 
 ## File Naming and Location Rules
 
@@ -32,6 +37,8 @@ Produce a compact, scannable summary of the latest implementation work and write
    - Include timestamp, step name, and ultra‑concise bullets of what changed.
    - For each file, include repo‑relative path and the most precise anchors you can: line ranges and/or symbol names.
    - Avoid pasting code; reference only.
+   - Write **Impact & Connections**: reason about callers, contracts, and sibling features the diff touches indirectly. Read the architecture skeleton (`.bindify/architecture/_map.md`) to ground this in real objects.
+   - Write **Architecture**: link affected objects with `[[wiki-links]]`, tagged `created` / `modified` / `touches`.
 
 3) Write to File
    - If `target_md_path` exists: append a new section at the end.
@@ -39,6 +46,7 @@ Produce a compact, scannable summary of the latest implementation work and write
    - **Verify the path follows the naming convention**: `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md`
    - Do not create `updates/` directories or per-step markdown files.
    - Do not rewrite or reformat existing content outside the new section.
+   - After writing, run `scan-architecture` in `fill` mode if the Architecture section references any object that does not yet exist.
    - After writing, run `update-links` for the current plan folder.
 
 ## Output Format (for `target_md_path`)
@@ -70,6 +78,15 @@ Produce a compact, scannable summary of the latest implementation work and write
 - Methods: `<methodA()>`, `<methodB(param:)>`
 - Properties/Enums: `<propertyX>`, `<EnumCaseY>`
 
+### Impact & Connections
+- <what else this can affect: callers, consumers, data contracts, sibling features>
+- <assumptions introduced; breaking/migration concerns; "none — local change because …">
+
+### Architecture
+- `created` [[architecture/modules/<new-object>]] — <one line>
+- `modified` [[architecture/modules/<object>]] — <what shifted>
+- `touches` [[architecture/data/<model>]] — <how it depends on it>
+
 ### Notes
 - Decisions: <key decisions/trade‑offs>
 - Follow‑ups: <clear next small actions>
@@ -84,7 +101,8 @@ Produce a compact, scannable summary of the latest implementation work and write
 - Appends a new section to `target_md_path` with timestamp and step name.
 - If creating a new file, includes a header + feature overview before the first step entry.
 - Lists all materially changed files with precise anchors (lines or symbols).
-- Summarizes changes in ≤ 5 bullets total across sections.
+- **Impact & Connections** is present and non-empty (ripple effects, not a file list).
+- **Architecture** is present with at least one `[[wiki-link]]` tagged `created`/`modified`/`touches`.
 - No code pasted; only references and concise descriptions.
 
 ## Example Invocation Context
@@ -108,6 +126,15 @@ Produce a compact, scannable summary of the latest implementation work and write
 ### Key Components
 - Classes/Structs: `OnboardingState`, `UserSegment`
 - Methods: `startOnboarding()`, `updateSegment(_:)`
+
+### Impact & Connections
+- `UserSegment` now persists on `UserClient`; any screen reading user state can branch on segment — analytics and paywall gating are the likely next consumers.
+- Adds a new persisted field: existing users load with `segment = nil`, so downstream code must treat segment as optional until backfill. No API contract change.
+
+### Architecture
+- `created` [[architecture/modules/onboarding-flow]] — new coordinator-driven onboarding state machine
+- `modified` [[architecture/modules/user-client]] — gains segment persistence
+- `touches` [[architecture/data/user-record]] — adds optional `segment` attribute
 
 ### Notes
 - Decisions: Kept flow within existing coordinator; avoided deep refactor.
