@@ -2,6 +2,8 @@
 
 Read `updates.md` for a completed plan and generate a `verify.md` human review checklist.
 
+This command prepares human review of the step-level execution evidence. It does not produce the root user-facing summary; that happens later via `generate-history-summary`.
+
 ---
 
 ## When to use
@@ -9,6 +11,12 @@ Read `updates.md` for a completed plan and generate a `verify.md` human review c
 - All steps in `plan.md` are complete
 - All steps have a corresponding entry in `updates.md`
 - Ready to hand off to human for review
+
+`generate-verify` comes before root history summarization. The usual order is:
+1. complete step work in `updates.md`
+2. run `generate-verify`
+3. open PR / obtain PR context
+4. run `generate-history-summary`
 
 ---
 
@@ -34,6 +42,8 @@ Read `updates.md` for a completed plan and generate a `verify.md` human review c
 5. Write `verify.md` to the plan folder using the template structure
 6. Run `update-links` for the current plan folder
 
+Do not attempt to replace `verify.md` with a broader narrative summary. `verify.md` stays focused on human review of changed files and success criteria.
+
 ---
 
 ## Output
@@ -52,6 +62,14 @@ Write to: `<plan-folder>/verify.md`
 - Derive the overall checklist items directly from `brief.md` success criteria
 - Add a standard entry: "No new scope was introduced during apply"
 - Do not invent criteria not present in the brief
+
+---
+
+## Relationship to root history
+
+- `verify.md` is a review checklist derived from `updates.md`
+- `.bindify/history/entries/*.md` is a synthesized user/UI digest derived from `updates.md` plus PR/merge context
+- Both should link to the same plan evidence, but they serve different readers and should not duplicate each other
 
 ---
 

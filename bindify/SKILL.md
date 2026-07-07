@@ -11,7 +11,7 @@ Read this whole file when bindify is in play; load command/template files from `
 
 ## When to invoke each command
 
-Thirteen commands drive bindify. Each one is a self-contained markdown file in `references/commands/`. Read the full command file before executing it.
+Fourteen commands drive bindify. Each one is a self-contained markdown file in `references/commands/`. Read the full command file before executing it.
 
 | User signal | Command | Reference file |
 |---|---|---|
@@ -24,6 +24,7 @@ Thirteen commands drive bindify. Each one is a self-contained markdown file in `
 | Right after a step finishes, before moving on | `summarize-work-for-updates` | `references/commands/summarize-work-for-updates.md` |
 | "scan the architecture" / "build the architecture map" / missing arch object | `scan-architecture` | `references/commands/scan-architecture.md` |
 | "log this PR" / ingest a PR into the tracking history | `log-pr` | `references/commands/log-pr.md` |
+| "generate the final summary" / "refresh history after PR" / "prepare the UI summary" | `generate-history-summary` | `references/commands/generate-history-summary.md` |
 | "open a bindify PR" / publish logs to the `.bindify` submodule | `publish-bindify-pr` | `references/commands/publish-bindify-pr.md` |
 | All steps done, ready for human review | `generate-verify` | `references/commands/generate-verify.md` |
 | "research the codebase" before proposing | `research-codebase` | `references/commands/research-codebase.md` |
@@ -49,7 +50,11 @@ flowchart TD
     updatesMd["updates.md"]
     genVerify["generate-verify"]
     verifyMd["verify.md"]
+    genHistory["generate-history-summary"]
+    historyIndex["history/index.md"]
+    historyEntry["history/entries/<date>-<slug>.md"]
     humanSignoff["human sign-off"]
+    prCreated["PR created"]
     mergeMain["merge to main"]
 
     coordinate["coordinate-updates"]
@@ -72,7 +77,12 @@ flowchart TD
     updatesMd --> genVerify
     genVerify --> verifyMd
     verifyMd --> humanSignoff
-    humanSignoff --> mergeMain
+    humanSignoff --> prCreated
+    prCreated --> genHistory
+    genHistory --> historyEntry
+    genHistory --> historyIndex
+    historyEntry --> mergeMain
+    mergeMain --> genHistory
 
     dialogue -.-> coordinate
     iterate -.-> logHotfix
@@ -81,9 +91,11 @@ flowchart TD
     planMd -.-> updateLinks
     updatesMd -.-> updateLinks
     verifyMd -.-> updateLinks
+    historyIndex -.-> updateLinks
+    historyEntry -.-> updateLinks
 ```
 
-Alongside this pipeline, `coordinator.md` runs in parallel as a conversation journal and `hotfixes.md` captures unplanned fixes linked back to affected plans.
+Alongside this pipeline, `coordinator.md` runs in parallel as a conversation journal, `hotfixes.md` captures unplanned fixes linked back to affected plans, and `.bindify/history/` provides a root-level digest layer for humans and UI surfaces.
 
 ## Folder layout
 
@@ -91,8 +103,12 @@ Alongside this pipeline, `coordinator.md` runs in parallel as a conversation jou
 .bindify/
 ├── AGENTS.md                          ← root instructions for any agent entering the repo
 ├── commands/                          ← canonical command specs
-├── templates/                         ← brief, proposal, coordinator, verify, hotfixes, architecture templates
+├── templates/                         ← brief, proposal, coordinator, verify, history, hotfixes, architecture templates
 ├── docs/                              ← cross-feature reference docs (event schemas, etc.)
+├── history/
+│   ├── index.md                       ← compact root history overview for humans/UI
+│   └── entries/
+│       └── <date>-<slug>.md           ← synthesized summary with links to plans, features, PRs, docs
 ├── architecture/                      ← the architecture object graph (Capacities-style)
 │   ├── _map.md                        ← high-level skeleton + object index
 │   ├── system/<name>.md               ← type: system
@@ -130,6 +146,7 @@ Alongside this pipeline, `coordinator.md` runs in parallel as a conversation jou
 | review | `proposal.md` (annotated) | human |
 | apply | `plan.md` + `updates.md` | AI via `iterate-planning-mode` |
 | verify | `verify.md` | human checklist |
+| summarize-for-history | `.bindify/history/index.md` + `.bindify/history/entries/<date>-<slug>.md` | AI via `generate-history-summary` |
 
 ## Architecture object graph
 
@@ -150,17 +167,25 @@ ripple effects — what else the change can affect) and an **Architecture** sect
 objects it `created` / `modified` / `touches`). This is what turns the log into a connected graph instead of a
 flat history.
 
+`updates.md` is still the execution ledger, not the best user-facing overview. Bindify now treats root history
+summaries as a separate layer: concise synthesized narratives that read the step logs, link back to them, and
+explain the combined effect on features, architecture, and adjacent docs/research.
+
 ## PR-driven logging flow
 
 Each PR is a unit of change. The vision flow:
 
 1. Human + agent plan a feature at a high level → `coordinator.md` + `brief.md` + `proposal.md`.
 2. Agent implements step 1 in planning mode → `plan.md` + `iterate-planning-mode`.
-3. New branch + PR; each iteration appends to a steps file attached to the PR.
-4. `log-pr` reads the PR (gh CLI → iterate steps file → git diff fallback), writes an architecture-aware,
-   impact-aware log with an **Alignment** assessment against `standard`/`pattern` objects, and runs
-   `scan-architecture fill`.
-5. `publish-bindify-pr` opens a PR to the `.bindify` submodule with the new logs + architecture updates.
+3. Each implementation step appends a bounded, architecture-aware entry to `updates.md`.
+4. `generate-verify` builds the human review checklist from those step entries.
+5. Once the product PR exists, `generate-history-summary` creates or refreshes a root history entry and updates
+   `history/index.md` so the change is understandable without reading the raw step log.
+6. `log-pr` reads the PR (gh CLI → iterate steps file → git diff fallback), appends the impact-aware PR log,
+   records alignment against `standard`/`pattern` objects, and runs `scan-architecture fill`.
+7. After merge, `generate-history-summary` runs again in `merged` mode so the root history reflects final
+   outcome and status.
+8. `publish-bindify-pr` opens a PR to the `.bindify` submodule with the new logs + architecture updates.
 
 ## Hard rules
 
@@ -168,6 +193,7 @@ Each PR is a unit of change. The vision flow:
 - **Every update entry needs Impact & Connections + Architecture sections.** No flat changelogs.
 - **Architecture `Responsibility` is human-owned.** `scan-architecture fill` appends change-log lines and edges only — it never rewrites a responsibility.
 - **`updates.md` is append-only.** Initialize with a feature overview on first creation; never rewrite past entries.
+- **Root history is the digest layer.** `history/index.md` and `history/entries/*.md` may be refreshed to keep the best current synthesis.
 - **`hotfixes.md` is append-only.** Log unplanned fixes; do not rewrite history.
 - **Never introduce scope beyond the current step.** Note observations, don't act on them.
 - **Repo-relative paths only.** Never absolute paths.
@@ -189,6 +215,7 @@ Bindify tracking runs in a dedicated bindify repository tied to one product, eve
 - `main` is stable history.
 - Every approved plan is published to `plan/<plan-name>` via `publish-plan`.
 - Executor updates and hotfix logs are committed to the active plan branch.
+- Root history summaries are generated when a PR is created and refreshed after merge to `main`.
 - Human sign-off on `verify.md` gates merge back to `main`.
 
 See `references/docs/workflow.md` for the repo and branch diagram.
@@ -217,6 +244,6 @@ Pi discovers skills by walking up the directory tree, so the global one is found
 - `references/AGENTS.md` — concise entry-point rules for agents
 - `references/docs/workflow.md` — visual deep-dive (repo branches, link graph, orchestrator model)
 - `references/commands/<name>.md` — load on demand when invoking a command
-- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, hotfix, or architecture object file
+- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, history, hotfix, or architecture object file
 
 When invoking a command, **read the full command file first**. The summaries in this skill are signposts, not substitutes.

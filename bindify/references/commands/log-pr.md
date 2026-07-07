@@ -2,7 +2,8 @@
 
 Read a pull request — the unit of change — and write an architecture-aware log: what the PR did, what it
 affects elsewhere, which architecture objects it moves, and how well it aligns with the project's standards and
-patterns. This is step 4 of the bindify vision flow; it is followed by `publish-bindify-pr` (step 5).
+patterns. This happens alongside the root history layer, where `generate-history-summary` produces the concise
+human/UI digest and `log-pr` records the detailed PR-alignment evidence. It is followed by `publish-bindify-pr`.
 
 `log-pr` does not change product code. It reads a PR that already exists and produces bindify artifacts.
 
@@ -58,7 +59,9 @@ were used.
 5. **Update the architecture graph.** Invoke `scan-architecture` in `fill` mode with this PR's changes as
    `SOURCE_REFS`, so missing objects are created and changed objects get change-log lines + edges.
 6. **Refresh links.** Run `update-links` for the affected folder.
-7. **Hand off.** Report the log path and the affected architecture objects; suggest `publish-bindify-pr` to open
+7. **Check root history state.** If a PR exists and no root history summary has been created yet, suggest or run
+   `generate-history-summary` in `pr-open` mode so the outcome appears in `.bindify/history/`.
+8. **Hand off.** Report the log path and the affected architecture objects; suggest `publish-bindify-pr` to open
    the PR against the `.bindify` submodule.
 
 ---
@@ -102,6 +105,7 @@ Base the rating on evidence from the diff and the standard/pattern objects, not 
 ## Related
 
 - `[[references/commands/summarize-work-for-updates.md]]`
+- `[[references/commands/generate-history-summary.md]]`
 - `[[references/commands/scan-architecture.md]]`
 - `[[references/commands/publish-bindify-pr.md]]`
 - `[[references/commands/log-hotfix.md]]`

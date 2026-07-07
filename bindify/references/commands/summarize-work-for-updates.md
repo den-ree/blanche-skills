@@ -3,6 +3,8 @@
 ## Agent Role: Change Summarizer (Append-Only Log)
 You are a concise documentation assistant. Summarize the work completed and append a clearly structured entry to a single `updates.md` file, including accurate repo-relative file references, what changed, **why it matters elsewhere**, and **how it fits the architecture**.
 
+This command writes execution evidence, not the final user-facing story. Root history summaries under `.bindify/history/` will later synthesize these entries into a short cross-step narrative.
+
 ## Command Objective
 Produce a compact, scannable summary of the latest implementation work and write it to the plan's `updates.md` file at a repo-relative path provided as input.
 
@@ -10,6 +12,11 @@ A log entry is not a changelog. The point of bindify is to connect a change to t
 
 - **Impact & Connections** — abstract, not a file list. What *else* can this change affect (callers, data contracts, sibling features, background jobs)? What assumptions does it introduce? Any breaking or migration concerns? If you genuinely believe the blast radius is zero, say so and justify it in one line.
 - **Architecture** — `[[wiki-links]]` to the architecture objects under `.bindify/architecture/` that this change creates, modifies, or merely depends on. Tag each link `created` / `modified` / `touches`. If an affected object does not exist yet, link it anyway and flag it for `scan-architecture` to fill.
+
+The later history summarizer depends on these entries being:
+- step-local rather than cross-plan narrative
+- linkable and easy to reference from a higher-level summary
+- explicit about impact and architecture even when the code diff is small
 
 ## File Naming and Location Rules
 
@@ -35,14 +42,16 @@ A log entry is not a changelog. The point of bindify is to connect a change to t
 
 2) Prepare Summary Entry
    - Include timestamp, step name, and ultra‑concise bullets of what changed.
+   - Keep the scope bounded to the work completed in this step. Do not attempt to summarize the whole feature or PR here.
    - For each file, include repo‑relative path and the most precise anchors you can: line ranges and/or symbol names.
    - Avoid pasting code; reference only.
    - Write **Impact & Connections**: reason about callers, contracts, and sibling features the diff touches indirectly. Read the architecture skeleton (`.bindify/architecture/_map.md`) to ground this in real objects.
    - Write **Architecture**: link affected objects with `[[wiki-links]]`, tagged `created` / `modified` / `touches`.
+   - Make sure the entry can be referenced later by a root history summary; prefer clear step names and stable markdown headings.
 
 3) Write to File
    - If `target_md_path` exists: append a new section at the end.
-   - If it does not exist: create `updates.md` with an initial feature overview, then append the first step section.
+   - If it does not exist: create `updates.md` with a minimal feature overview, then append the first step section.
    - **Verify the path follows the naming convention**: `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md`
    - Do not create `updates/` directories or per-step markdown files.
    - Do not rewrite or reformat existing content outside the new section.
@@ -58,7 +67,8 @@ A log entry is not a changelog. The point of bindify is to connect a change to t
 **Created:** [ISO8601 timestamp]
 
 ### Feature Overview
-- [1-3 bullets: problem being solved and intended outcome]
+- [1-2 bullets: problem being solved and intended outcome]
+- [Keep this lightweight; the root history layer will carry the cross-step narrative]
 
 ---
 
@@ -96,13 +106,15 @@ A log entry is not a changelog. The point of bindify is to connect a change to t
 - Paths must be repo‑relative: e.g., `app/tapelet-swift/Tapelet/Tapelet/Core/Onboarding/MainFlowCoordinator.swift`.
 - Prefer line ranges if known (`:45-78`), otherwise reference symbols/methods.
 - Keep bullets short; avoid code snippets.
+- Favor headings that will produce useful anchors for backlinks from `.bindify/history/entries/*.md`.
 
 ## Acceptance Criteria
 - Appends a new section to `target_md_path` with timestamp and step name.
-- If creating a new file, includes a header + feature overview before the first step entry.
+- If creating a new file, includes a header + lightweight feature overview before the first step entry.
 - Lists all materially changed files with precise anchors (lines or symbols).
 - **Impact & Connections** is present and non-empty (ripple effects, not a file list).
 - **Architecture** is present with at least one `[[wiki-link]]` tagged `created`/`modified`/`touches`.
+- The entry is scoped to one step and remains suitable as evidence for a later root history summary.
 - No code pasted; only references and concise descriptions.
 
 ## Example Invocation Context

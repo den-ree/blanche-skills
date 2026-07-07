@@ -18,7 +18,7 @@ publishes the *log of what a merged/under-review PR did* after the fact.
 |---|---|---|
 | `BINDIFY_SUBMODULE_PATH` | yes | Path to the `.bindify` submodule inside the product repo |
 | `SOURCE_PR` | yes | The product PR these logs describe (number or URL) — used in the PR title/body |
-| `CHANGED_PATHS` | no | Repo-relative bindify paths to include (updates.md, architecture/*) — default: all uncommitted bindify changes |
+| `CHANGED_PATHS` | no | Repo-relative bindify paths to include (history, updates.md, architecture/*) — default: all uncommitted bindify changes |
 | `BASE` | no | Base branch in the bindify repo (default: `main`) |
 | `BRANCH` | no | Branch name to create (default: `log/pr-<SOURCE_PR>`) |
 
@@ -27,7 +27,7 @@ publishes the *log of what a merged/under-review PR did* after the fact.
 ## Procedure
 
 1. **Validate.** Confirm `BINDIFY_SUBMODULE_PATH` is a git repo and there are bindify changes to publish
-   (updates/hotfixes entries, `architecture/` objects). If nothing changed, stop — there is nothing to publish.
+   (history entries, updates/hotfixes entries, `architecture/` objects). If nothing changed, stop — there is nothing to publish.
 2. **Branch.** In the submodule, checkout `BASE`, pull, and create `BRANCH` (`log/pr-<SOURCE_PR>`).
 3. **Commit.** Stage `CHANGED_PATHS` (or all bindify changes) and commit:
    `docs(bindify): log PR #<SOURCE_PR> — <feature/plan> + architecture updates`.
@@ -48,7 +48,7 @@ publishes the *log of what a merged/under-review PR did* after the fact.
 - Link to the source product PR.
 - The affected architecture objects (`created` / `modified` / `touches`).
 - The alignment rating from `log-pr` and a one-line justification.
-- Paths to the new/changed `updates.md` or `hotfixes.md` entries.
+- Paths to the new/changed history entries plus `updates.md` or `hotfixes.md` evidence.
 
 ---
 
