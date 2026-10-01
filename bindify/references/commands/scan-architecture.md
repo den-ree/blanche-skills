@@ -1,8 +1,10 @@
 # Command: scan-architecture
 
-Build and maintain the architecture object graph under `.bindify/architecture/`. Everything is an object;
+Build and maintain the architecture object graph under the Bindify **tracking** repo's `architecture/` (`.bindify/architecture/` or `bindify/architecture/`). Everything is an object;
 edges between objects come from `[[wiki-links]]`. The graph is meant to be browsed like Capacities — a web of
 typed, connected notes.
+
+Templates for new objects come from this **skill** (`references/templates/architecture-*.md`), not from the tracking tree.
 
 The cardinal rule: **build a small, reliable skeleton first, then fill it in incrementally.** Never try to
 document the whole system in one pass. A correct 8-object graph beats a guessed 80-object one.
@@ -24,7 +26,7 @@ If `MODE` is not given: `bootstrap` when `architecture/` has no object files, ot
 
 | Input | Required | Description |
 |---|---|---|
-| `BINDIFY_ROOT` | no | Path to `.bindify` (default: discover in cwd) |
+| `BINDIFY_ROOT` | no | Tracking root: `.bindify` or `bindify` (default: discover in cwd; never the skill install path) |
 | `MODE` | no | `bootstrap` \| `fill` (inferred if omitted) |
 | `SOURCE_REFS` | for `fill` | Repo-relative paths or PR ref whose changes drive the fill (e.g. an `updates.md` entry, a PR diff) |
 | `TARGET_AREA` | no | Narrow a `fill` to one area when the change is large |

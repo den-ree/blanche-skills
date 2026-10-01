@@ -1,7 +1,7 @@
 # Hotfixes — [Feature Name]
 
 **Feature:** `[feature-name]`  
-**Path:** `.bindify/development/fixes/<feature-name>/hotfixes.md`  
+**Path:** `development/fixes/<feature-name>/hotfixes.md` (under `.bindify/` or `bindify/`)  
 **Last updated:** YYYY-MM-DD
 
 ---

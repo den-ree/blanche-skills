@@ -26,26 +26,29 @@ Record unplanned bug fixes in `hotfixes.md` and connect them to impacted bindify
 
 ## Output path
 
-Write to:
+Write to (inside the Bindify tracking repo — `.bindify/` or `bindify/`):
 
 ```
-.bindify/development/fixes/<feature-name>/hotfixes.md
+development/fixes/<feature-name>/hotfixes.md
 ```
+
+If the active feature still lives only in `wip-docs/` and has not migrated yet, prefer linking `AFFECTED_PLAN_PATHS` to `wip-docs/` artifacts; still write hotfixes into the Bindify tracking repo (not into `wip-docs/`).
 
 ---
 
 ## Procedure
 
 1. Ensure fix folder exists
-   - Create `.bindify/development/fixes/<feature-name>/` if missing
-   - Initialize `hotfixes.md` from `.bindify/templates/hotfixes.md` if needed
+   - Resolve Bindify root (`.bindify/` or `bindify/`)
+   - Create `development/fixes/<feature-name>/` if missing
+   - Initialize `hotfixes.md` from the hotfixes template if needed
 
 2. Append entry
    - Add a new top entry with date, summary, changed files, and outcome
    - Keep existing entries unchanged (append-only history)
 
 3. Link impacted docs
-   - Add `[[wiki-links]]` to each file in `AFFECTED_PLAN_PATHS`
+   - Add `[[wiki-links]]` to each file in `AFFECTED_PLAN_PATHS` (may include `wip-docs/*`)
    - Invoke `update-links` to refresh backlinks and `## Related` sections
 
 4. Commit tracking update
@@ -59,13 +62,14 @@ Write to:
 - Do not rewrite or delete previous hotfix entries
 - Keep logs factual; do not infer unverified root causes
 - Use repo-relative paths only
+- Do not place hotfixes inside `wip-docs/`
 - If no affected context docs can be identified, stop and ask
 
 ---
 
 ## Acceptance criteria
 
-- `hotfixes.md` exists and includes the new entry
+- `hotfixes.md` exists under Bindify `development/fixes/<feature-name>/` and includes the new entry
 - Affected plans/features are linked
 - Backlinks are refreshed via `update-links`
 - Change is committed on the appropriate tracking branch

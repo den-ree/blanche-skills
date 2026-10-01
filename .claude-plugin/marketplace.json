@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "bindify",
-      "description": "Filesystem-based protocol for coordinating AI agents on software work. Defines .bindify/ folder layout, the plan pipeline, templates, and six commands for orchestrator and executor agents.",
+      "description": "Filesystem-based protocol for coordinating AI agents on software work. Active plans live in wip-docs/; durable history migrates into Bindify tracking repos. Defines the plan pipeline, templates, and commands for orchestrator and executor agents.",
       "repository": "https://github.com/den-ree/bindify-skill",
       "version": "1.0.0",
       "author": {

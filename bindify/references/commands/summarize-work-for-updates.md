@@ -3,7 +3,7 @@
 ## Agent Role: Change Summarizer (Append-Only Log)
 You are a concise documentation assistant. Summarize the work completed and append a clearly structured entry to a single `updates.md` file, including accurate repo-relative file references, what changed, **why it matters elsewhere**, and **how it fits the architecture**.
 
-This command writes execution evidence, not the final user-facing story. Root history summaries under `.bindify/history/` will later synthesize these entries into a short cross-step narrative.
+This command writes execution evidence, not the final user-facing story. Root history summaries under the Bindify tracking repo's `history/` will later synthesize these entries into a short cross-step narrative.
 
 ## Command Objective
 Produce a compact, scannable summary of the latest implementation work and write it to the plan's `updates.md` file at a repo-relative path provided as input.
@@ -11,7 +11,7 @@ Produce a compact, scannable summary of the latest implementation work and write
 A log entry is not a changelog. The point of bindify is to connect a change to the rest of the system. Two sections are therefore **required** in every entry and must not be left empty:
 
 - **Impact & Connections** — abstract, not a file list. What *else* can this change affect (callers, data contracts, sibling features, background jobs)? What assumptions does it introduce? Any breaking or migration concerns? If you genuinely believe the blast radius is zero, say so and justify it in one line.
-- **Architecture** — `[[wiki-links]]` to the architecture objects under `.bindify/architecture/` that this change creates, modifies, or merely depends on. Tag each link `created` / `modified` / `touches`. If an affected object does not exist yet, link it anyway and flag it for `scan-architecture` to fill.
+- **Architecture** — `[[wiki-links]]` to the architecture objects under the Bindify tracking repo's `architecture/` that this change creates, modifies, or merely depends on. Tag each link `created` / `modified` / `touches`. If an affected object does not exist yet, link it anyway and flag it for `scan-architecture` to fill.
 
 The later history summarizer depends on these entries being:
 - step-local rather than cross-plan narrative
@@ -20,24 +20,29 @@ The later history summarizer depends on these entries being:
 
 ## File Naming and Location Rules
 
-**IMPORTANT**: Update log files must follow this naming convention:
-- **Location**: `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md`
-- Use exactly the filename `updates.md` per plan.
+**IMPORTANT**: While a feature is active, update logs live in the flat WIP folder:
+
+- **Location**: `wip-docs/updates.md`
+- Use exactly the filename `updates.md`.
 - Do not create per-step files or an `updates/` folder.
+- Do **not** write into `.bindify/development/...` or `bindify/development/...` during apply; migration happens later via `publish-bindify-pr` / `log-pr`.
 
 **Examples of correct paths:**
-- `.bindify/development/features/audio-engine/plans/device-routing/updates.md`
-- `.bindify/development/fixes/user-authentication/plans/oauth-fallback/updates.md`
+- `wip-docs/updates.md`
+
+After migration, the durable path becomes:
+- `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md` (or `bindify/...`)
 
 ## Inputs
-- `target_md_path` (required): repo-relative path to the plan updates log (must end with `updates.md`), e.g., `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md`.
+- `target_md_path` (optional): defaults to `wip-docs/updates.md`. Must end with `updates.md`.
 - `step_name` (recommended): human‑readable name of the step (e.g., `Step‑003: Add Onboarding Flow`).
-- `source_context_paths` (optional): list of repo‑relative paths to read for context (e.g., `WORKING_STEP.md`).
+- `source_context_paths` (optional): list of repo‑relative paths to read for context (e.g., `wip-docs/plan.md`).
 - `changed_files` (optional but preferred): explicit list of changed files (repo‑relative). If omitted, infer from prior context you have.
 
 ## Process
 1) Gather Context
    - Read `source_context_paths` if provided and extract what was implemented.
+   - Prefer reading `wip-docs/plan.md` for step context when present.
    - Build the best available list of changed files and key components touched (classes, methods, properties).
 
 2) Prepare Summary Entry
@@ -45,25 +50,27 @@ The later history summarizer depends on these entries being:
    - Keep the scope bounded to the work completed in this step. Do not attempt to summarize the whole feature or PR here.
    - For each file, include repo‑relative path and the most precise anchors you can: line ranges and/or symbol names.
    - Avoid pasting code; reference only.
-   - Write **Impact & Connections**: reason about callers, contracts, and sibling features the diff touches indirectly. Read the architecture skeleton (`.bindify/architecture/_map.md`) to ground this in real objects.
+   - Write **Impact & Connections**: reason about callers, contracts, and sibling features the diff touches indirectly. Read the architecture skeleton (`architecture/_map.md` under `.bindify/` or `bindify/`) to ground this in real objects when available.
    - Write **Architecture**: link affected objects with `[[wiki-links]]`, tagged `created` / `modified` / `touches`.
    - Make sure the entry can be referenced later by a root history summary; prefer clear step names and stable markdown headings.
 
 3) Write to File
    - If `target_md_path` exists: append a new section at the end.
-   - If it does not exist: create `updates.md` with a minimal feature overview, then append the first step section.
-   - **Verify the path follows the naming convention**: `.bindify/development/<category>/<feature-name>/plans/<plan-name>/updates.md`
+   - If it does not exist: create `updates.md` with a minimal feature overview (include Category / Feature / Plan from `wip-docs/brief.md` or `plan.md`), then append the first step section.
+   - **Verify the path is `wip-docs/updates.md` for active work.**
    - Do not create `updates/` directories or per-step markdown files.
    - Do not rewrite or reformat existing content outside the new section.
    - After writing, run `scan-architecture` in `fill` mode if the Architecture section references any object that does not yet exist.
-   - After writing, run `update-links` for the current plan folder.
+   - After writing, run `update-links` for `wip-docs/`.
 
 ## Output Format (for `target_md_path`)
 ```markdown
 ## Updates Log — [Plan Name]
 
+**Category:** `features` | `fixes` | `refactor` | `chore`
 **Feature:** [feature/fix/refactor/chore name]
-**Plan:** `plans/<plan-name>/plan.md`
+**Plan:** `<plan-name>`
+**WIP path:** `wip-docs/`
 **Created:** [ISO8601 timestamp]
 
 ### Feature Overview
@@ -103,14 +110,14 @@ The later history summarizer depends on these entries being:
 ```
 
 ## Referencing Rules
-- Paths must be repo‑relative: e.g., `app/tapelet-swift/Tapelet/Tapelet/Core/Onboarding/MainFlowCoordinator.swift`.
+- Paths must be repo‑relative.
 - Prefer line ranges if known (`:45-78`), otherwise reference symbols/methods.
 - Keep bullets short; avoid code snippets.
-- Favor headings that will produce useful anchors for backlinks from `.bindify/history/entries/*.md`.
+- Favor headings that will produce useful anchors for backlinks from history entries after migration.
 
 ## Acceptance Criteria
-- Appends a new section to `target_md_path` with timestamp and step name.
-- If creating a new file, includes a header + lightweight feature overview before the first step entry.
+- Appends a new section to `wip-docs/updates.md` with timestamp and step name.
+- If creating a new file, includes a header + lightweight feature overview (with Category/Feature/Plan) before the first step entry.
 - Lists all materially changed files with precise anchors (lines or symbols).
 - **Impact & Connections** is present and non-empty (ripple effects, not a file list).
 - **Architecture** is present with at least one `[[wiki-link]]` tagged `created`/`modified`/`touches`.
@@ -118,10 +125,10 @@ The later history summarizer depends on these entries being:
 - No code pasted; only references and concise descriptions.
 
 ## Example Invocation Context
-- `target_md_path`: `.bindify/development/features/onboarding/plans/main-flow/updates.md`
+- `target_md_path`: `wip-docs/updates.md`
 - `step_name`: `Step‑003: Add Onboarding Flow`
-- `source_context_paths`: [`.bindify/development/features/onboarding/plans/main-flow/plan.md`]
-- `changed_files`: [`app/tapelet-swift/Tapelet/Tapelet/Core/Onboarding/MainFlowCoordinator.swift`, `app/tapelet-swift/Tapelet/Tapelet/Core/User/UserClient.swift`]
+- `source_context_paths`: [`wip-docs/plan.md`]
+- `changed_files`: [`app/.../MainFlowCoordinator.swift`, `app/.../UserClient.swift`]
 
 ## Example Appended Entry
 ```markdown
@@ -132,8 +139,8 @@ The later history summarizer depends on these entries being:
 - Introduced `UserSegment` and persisted onboarding progress.
 
 ### File Changes
-- `app/tapelet-swift/Tapelet/Tapelet/Core/Onboarding/MainFlowCoordinator.swift:startOnboarding()` — new entry point + navigation logic
-- `app/tapelet-swift/Tapelet/Tapelet/Core/User/UserClient.swift:90-128` — added `userSegment` + `updateSegment(_:)`
+- `app/.../MainFlowCoordinator.swift:startOnboarding()` — new entry point + navigation logic
+- `app/.../UserClient.swift:90-128` — added `userSegment` + `updateSegment(_:)`
 
 ### Key Components
 - Classes/Structs: `OnboardingState`, `UserSegment`
@@ -152,4 +159,3 @@ The later history summarizer depends on these entries being:
 - Decisions: Kept flow within existing coordinator; avoided deep refactor.
 - Follow‑ups: Add analytics events for step transitions.
 ```
-

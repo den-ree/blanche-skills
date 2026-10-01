@@ -1,6 +1,9 @@
 # Coordinator — [Feature / Fix / Refactor / Chore Name]
 
-**Category:** `feature` | `fix` | `refactor` | `chore`  
+**Category:** `features` | `fixes` | `refactor` | `chore`  
+**Feature:** [feature-name in kebab-case]  
+**Plan:** [plan-name in kebab-case] _(optional until a plan exists)_  
+**WIP path:** `wip-docs/coordinator.md`  
 **Status:** `active` | `paused` | `done`  
 **Started:** YYYY-MM-DD  
 **Last updated:** YYYY-MM-DD  
@@ -18,7 +21,7 @@ Written from the human's perspective — not a spec, just the honest reason._
 
 | Plan | Status | Notes |
 |---|---|---|
-| `plans/<plan-name>/` | `proposed` \| `in progress` \| `done` | One line on scope |
+| `<plan-name>` | `proposed` \| `in progress` \| `done` | One line on scope |
 
 ---
 
@@ -51,6 +54,8 @@ _What the human intends to do next — start a plan, review a proposal, run a st
 
 ## Related
 
-- `[[plans/<plan-name>/brief.md]]`
-- `[[plans/<plan-name>/proposal.md]]`
-- `[[plans/<plan-name>/plan.md]]`
+- `[[brief.md]]`
+- `[[proposal.md]]`
+- `[[plan.md]]`
+- `[[updates.md]]`
+- `[[verify.md]]`

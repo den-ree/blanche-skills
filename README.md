@@ -1,6 +1,6 @@
 # Bindify Agent Skill
 
-Filesystem-based coordination for AI agents working on software — brief, propose, plan, apply, and verify through structured markdown in a `.bindify/` folder.
+Filesystem-based coordination for AI agents working on software — brief, propose, plan, apply, and verify through structured markdown. **Active feature work lives in `wip-docs/` at the project root**; durable history migrates into a Bindify tracking repo (`.bindify/` or `bindify/`, often a submodule).
 
 Compatible with any AI coding tool that supports the [Agent Skills open format](https://agentskills.io/home).
 
@@ -8,7 +8,7 @@ Compatible with any AI coding tool that supports the [Agent Skills open format](
 
 - Teams running multi-agent workflows (orchestrator + executors) on shared repos.
 - Developers who want durable, reviewable planning artifacts instead of chat-only context.
-- Anyone using `.bindify/` folders, coordinator/brief/proposal/plan/updates/verify files, or bindify commands.
+- Anyone using `wip-docs/`, Bindify tracking folders, coordinator/brief/proposal/plan/updates/verify files, or bindify commands.
 
 ## How to Use This Skill
 
@@ -83,25 +83,27 @@ The skill is available automatically in pi sessions.
 
 ## What This Skill Offers
 
-Bindify is a filesystem protocol — no message queue, no HTTP. Agents communicate by reading and writing markdown under `.bindify/`.
+Bindify is a filesystem protocol — no message queue, no HTTP. Agents communicate by reading and writing markdown. Active work stays in a flat, agent-readable `wip-docs/` folder; completed plans migrate into the Bindify tracking repo.
 
 ### Pipeline
 
 ```
 human + agent dialogue
         ↓
-   brief.md          ← problem, goals, constraints
+   wip-docs/brief.md      ← problem, goals, constraints
         ↓
-   proposal.md       ← approach + options; human reviews
+   wip-docs/proposal.md   ← approach + options; human reviews
         ↓
-   plan.md           ← source of truth for execution
+   wip-docs/plan.md       ← source of truth for execution
         ↓
-   updates.md        ← append-only execution log
+   wip-docs/updates.md    ← append-only execution log
         ↓
-   verify.md         ← human checklist
+   wip-docs/verify.md     ← human checklist
+        ↓
+   publish-bindify-pr     ← migrate into Bindify development/... and remove wip-docs/
 ```
 
-`coordinator.md` runs in parallel as a conversation journal for intent, decisions, and pivots.
+`wip-docs/coordinator.md` runs in parallel as a conversation journal for intent, decisions, and pivots.
 
 ### Six commands
 
@@ -114,10 +116,11 @@ human + agent dialogue
 | `generate-verify` | Build a human verification checklist |
 | `research-codebase` | Research before proposing |
 
-### Two placements
+### Two placements (+ WIP)
 
-- **Global** — clone to `~/.bindify/` for shared commands and templates across projects.
-- **Project-local** — `.bindify/` inside each repo for feature history, committed with the code.
+- **Global skill** — install for shared commands and templates across projects.
+- **Project tracking** — `.bindify/` or `bindify/` inside each product repo (often a submodule) for durable history, architecture, and completed plans.
+- **Active WIP** — `wip-docs/` at the host project root while a feature is in progress.
 
 ## Skill Structure
 

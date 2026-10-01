@@ -1,7 +1,7 @@
 {
   "name": "bindify",
   "version": "1.0.0",
-  "description": "Filesystem-based protocol for coordinating AI agents on software work via structured markdown in .bindify/ folders.",
+  "description": "Filesystem-based protocol for coordinating AI agents on software work via wip-docs/ active plans and durable Bindify tracking repos.",
   "author": {
     "name": "Den Ree"
   },

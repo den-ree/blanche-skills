@@ -2,9 +2,11 @@
 
 Read a completed plan's execution evidence and produce a root-level history summary that is short, clear, and easy for humans or UI surfaces to scan.
 
-This command creates or refreshes:
-- `.bindify/history/entries/<date>-<slug>.md` — the full synthesized summary
-- `.bindify/history/index.md` — a compact index entry pointing at that summary
+This command creates or refreshes (under the Bindify **tracking** root — `.bindify/` or `bindify/`):
+- `history/entries/<date>-<slug>.md` — the full synthesized summary
+- `history/index.md` — a compact index entry pointing at that summary
+
+While a feature is still active, source evidence may still live in `wip-docs/`; after migration, read the plan under tracking `development/...`. Do not write history into `wip-docs/`.
 
 `generate-history-summary` does not replace `updates.md`. It reads `updates.md` and related context, then turns that evidence into a concise narrative layer.
 
@@ -40,10 +42,10 @@ Typical timing:
 
 ## Placement rules
 
-Write into the root history area, not inside a feature folder:
+Write into the tracking root history area (`.bindify/history/` or `bindify/history/`), not inside a feature folder or `wip-docs/`:
 
-- Index: `.bindify/history/index.md`
-- Full entry: `.bindify/history/entries/<date>-<slug>.md`
+- Index: `history/index.md`
+- Full entry: `history/entries/<date>-<slug>.md`
 
 Naming guidance for entry files:
 - Use the first generation date as the prefix: `<YYYY-MM-DD>-<slug>.md`
@@ -78,12 +80,12 @@ Naming guidance for entry files:
    - In `merged` mode, status should clearly indicate merged/finalized state.
 
 5. **Update the root index.**
-   - Ensure `.bindify/history/index.md` exists.
+   - Ensure tracking `history/index.md` exists (under `.bindify/` or `bindify/`).
    - Add or refresh one compact row/section for this history entry.
    - Keep the index brief; it is a discovery surface, not a duplicate of the full entry.
 
 6. **Refresh links.**
-   - Run `update-links` for `.bindify/history/`.
+   - Run `update-links` for tracking `history/`.
    - Ensure the history entry links back to plans, features, step logs, architecture objects, and related docs.
 
 ---
@@ -108,7 +110,7 @@ Mandatory qualities:
 
 ---
 
-## Output format: `.bindify/history/entries/<date>-<slug>.md`
+## Output format: `history/entries/<date>-<slug>.md`
 
 ```markdown
 # History Summary — [Short outcome title]
@@ -152,7 +154,7 @@ Mandatory qualities:
 
 ---
 
-## Output format: `.bindify/history/index.md`
+## Output format: `history/index.md`
 
 Keep index entries compact. One entry should summarize the summary:
 
@@ -173,7 +175,7 @@ Do not copy the full history entry into the index.
 ## Hard rules
 
 - **Never replace `updates.md` with this summary.** `updates.md` stays the append-only execution ledger.
-- **Write root history only under `.bindify/history/`.** Do not place these summaries in feature folders.
+- **Write root history only under tracking `history/`** (`.bindify/history/` or `bindify/history/`). Do not place these summaries in feature folders or `wip-docs/`.
 - **One evolving entry per outcome.** Refresh the same entry for `pr-open` → `merged`; do not fork duplicate entries unless the work is genuinely a different outcome.
 - **Synthesize across steps.** If the summary reads like a flattened changelog, it is wrong.
 - **Preserve evidence links.** The summary must point back to plans, step logs, and related docs.
@@ -183,8 +185,8 @@ Do not copy the full history entry into the index.
 
 ## Acceptance criteria
 
-- A summary entry exists under `.bindify/history/entries/`.
-- `.bindify/history/index.md` contains a compact link to that entry.
+- A summary entry exists under tracking `history/entries/`.
+- Tracking `history/index.md` contains a compact link to that entry.
 - The entry clearly distinguishes `pr-open` vs `merged` status.
 - The entry links back to the relevant plan and step evidence.
 - The entry can reference multiple features and supporting docs when the outcome is cross-cutting.

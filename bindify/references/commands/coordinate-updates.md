@@ -1,6 +1,6 @@
 # Command: coordinate-updates
 
-Create or update `coordinator.md` for a feature by summarizing the current conversation.
+Create or update `coordinator.md` for the active feature by summarizing the current conversation.
 Initiated by the human at any point during a chat session.
 
 ---
@@ -17,30 +17,34 @@ Initiated by the human at any point during a chat session.
 ## Step 1 — Detect which path to take
 
 Check if `coordinator.md` exists at:
+
 ```
-.bindify/development/<category>/<feature-name>/coordinator.md
+wip-docs/coordinator.md
 ```
 
 - **Does not exist** → follow the [Create path](#create-path)
 - **Already exists** → follow the [Update path](#update-path)
 
+If `wip-docs/` is empty but a completed feature coordinator already lives under the Bindify tracking repo, do **not** silently reopen it here — create a new WIP coordinator for the active feature only.
+
 ---
 
 ## Create path
 
-Run this when `coordinator.md` does not exist yet.
+Run this when `wip-docs/coordinator.md` does not exist yet.
 
-1. Create the feature folder: `.bindify/development/<category>/<feature-name>/`
-2. Create `coordinator.md` using the template at `.bindify/templates/coordinator.md`
-3. Fill **Intent** — what this feature is and why, inferred from the conversation
-4. Write the first session log entry (see [Session entry format](#session-entry-format) below)
-5. If a `brief.md` or `proposal.md` was created this session, add it to the **Plans** table with status `proposed`
+1. Create `wip-docs/` at the host project root if missing
+2. Create `coordinator.md` using the **skill** template at `references/templates/coordinator.md` (not the project tracking folder)
+3. Set header metadata: `Category`, `Feature` (and `Plan` when known)
+4. Fill **Intent** — what this feature is and why. Use only what the user stated. If intention or necessity was never answered, ask (see `references/docs/working-style.md`) and stop before writing. Chat is caveman; `coordinator.md` stays normal prose.
+5. Write the first session log entry (see [Session entry format](#session-entry-format) below)
+6. If a `brief.md` or `proposal.md` was created this session, add it to the **Plans** table with status `proposed`
 
 ---
 
 ## Update path
 
-Run this when `coordinator.md` already exists.
+Run this when `wip-docs/coordinator.md` already exists.
 
 1. Read the full existing `coordinator.md`
 2. Read the current conversation — identify what is new since the last session entry
@@ -70,7 +74,7 @@ Run this when `coordinator.md` already exists.
 **Next:**
 [What the human intends to do next.]
 
-**Linked plan:** `plans/<plan-name>/` — `proposed` | `in progress` | `done`
+**Linked plan:** `<plan-name>` — `proposed` | `in progress` | `done`
 [Omit if no plan was created or updated this session.]
 ```
 
@@ -102,11 +106,13 @@ Run this when `coordinator.md` already exists.
 ## Output path
 
 ```
-.bindify/development/<category>/<feature-name>/coordinator.md
+wip-docs/coordinator.md
 ```
+
+On migration (`publish-bindify-pr` / `log-pr`), this file is merged into the Bindify tracking repo at `development/<category>/<feature-name>/coordinator.md`.
 
 ---
 
 ## Post-step
 
-After writing `coordinator.md`, run `update-links` for the feature/plan context so related docs stay connected via `[[wiki-links]]` and `## Related` backlinks.
+After writing `coordinator.md`, run `update-links` for `wip-docs/` so related docs stay connected via `[[wiki-links]]` and `## Related` backlinks.

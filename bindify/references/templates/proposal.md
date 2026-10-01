@@ -1,45 +1,37 @@
 # Proposal — [Plan Name]
 
-**Brief:** `plans/<plan-name>/brief.md`  
+**Category:** `features` | `fixes` | `refactor` | `chore`  
+**Feature:** [feature-name in kebab-case]  
+**Plan:** [plan-name in kebab-case]  
+**Brief:** `wip-docs/brief.md`  
 **Generated:** YYYY-MM-DD  
-**Status:** `proposed` | `in review` | `approved` | `rejected`
+**Status:** `proposed` | `in review` | `approved` | `rejected`  
+**Word limit:** ≤ 250 words (excluding frontmatter and human review)
 
 ---
 
 ## Approach
 
-_Agent-written. A clear description of the proposed implementation approach.
-What will be built, how it fits the existing system, and why this approach over alternatives._
+_Max 2–3 sentences. Core architecture and chosen mechanism._
 
 ---
 
-## Options considered
+## Tradeoff
 
-### Option A — [name] ✅ recommended
-_Description. Why recommended._
-
-**Tradeoffs:**
-- Pro: ...
-- Con: ...
-
-### Option B — [name]
-_Description. Why not chosen._
-
-**Tradeoffs:**
-- Pro: ...
-- Con: ...
+- **Chosen:** [Option A] — why recommended.
+- **Alternative:** [Option B] — why rejected.
 
 ---
 
 ## Proposed steps
 
-_These become the steps in `plan.md` once approved. Each step should be independently executable._
+_Step-001 must be a UI / Workflow Prototype for any user-facing feature._
 
-| Step | Description | Outputs |
-|---|---|---|
-| 1 | ... | files created/modified |
-| 2 | ... | files created/modified |
-| 3 | ... | files created/modified |
+| Step | Type | Description | Target Outputs |
+|---|---|---|---|
+| Step-001 | Prototype | Interactive UI slice (mock data, full click-through) | `path/to/Views/...` |
+| Step-002 | Integration | Connect real services/state to prototype | `path/to/Services/...` |
+| Step-003 | Polish/Edge | Error handling, persistence, edge states | `path/to/...` |
 
 ---
 
@@ -71,3 +63,4 @@ _Any additional context or constraints to carry into apply phase._
 - `[[brief.md]]`
 - `[[plan.md]]`
 - `[[updates.md]]`
+- `[[coordinator.md]]`

@@ -1,6 +1,10 @@
 # Verify — [Plan Name]
 
-**Plan:** `plans/<plan-name>/plan.md`  
+**Category:** `features` | `fixes` | `refactor` | `chore`  
+**Feature:** [feature-name in kebab-case]  
+**Plan:** [plan-name in kebab-case]  
+**WIP path:** `wip-docs/verify.md`  
+**Plan file:** `wip-docs/plan.md`  
 **Generated:** YYYY-MM-DD  
 **Status:** `pending` | `in review` | `passed` | `issues found`
 
@@ -8,7 +12,7 @@
 
 ## How to use this file
 
-This checklist was generated from `updates.md` entries after all steps completed.
+This checklist was generated from `wip-docs/updates.md` entries after all steps completed.
 Go through each file, open it, and check the box when satisfied.
 Add a note if something needs fixing — then decide whether it's a new `fix/` or an additional step.
 
@@ -60,4 +64,5 @@ _List anything that needs follow-up. Each issue should become a new entry in `fi
 
 - `[[plan.md]]`
 - `[[updates.md]]`
-- `[[../coordinator.md]]`
+- `[[brief.md]]`
+- `[[coordinator.md]]`

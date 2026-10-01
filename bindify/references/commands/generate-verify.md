@@ -12,11 +12,12 @@ This command prepares human review of the step-level execution evidence. It does
 - All steps have a corresponding entry in `updates.md`
 - Ready to hand off to human for review
 
-`generate-verify` comes before root history summarization. The usual order is:
-1. complete step work in `updates.md`
-2. run `generate-verify`
+`generate-verify` comes before root history summarization and WIP migration. The usual order is:
+1. complete step work in `wip-docs/updates.md`
+2. run `generate-verify` → `wip-docs/verify.md`
 3. open PR / obtain PR context
-4. run `generate-history-summary`
+4. migrate via `log-pr` / `publish-bindify-pr`
+5. run `generate-history-summary`
 
 ---
 
@@ -24,9 +25,9 @@ This command prepares human review of the step-level execution evidence. It does
 
 | Input | Required | Description |
 |---|---|---|
-| `PATH_TO_PLAN_MD` | yes | Repo-relative path to `plan.md` |
-| `PATH_TO_UPDATES_MD` | yes | Repo-relative path to `updates.md` |
-| `PATH_TO_BRIEF_MD` | yes | Repo-relative path to `brief.md` — for success criteria |
+| `PATH_TO_PLAN_MD` | no | Defaults to `wip-docs/plan.md` |
+| `PATH_TO_UPDATES_MD` | no | Defaults to `wip-docs/updates.md` |
+| `PATH_TO_BRIEF_MD` | no | Defaults to `wip-docs/brief.md` — for success criteria |
 
 ---
 
@@ -39,9 +40,9 @@ This command prepares human review of the step-level execution evidence. It does
    - Write one sentence explaining *why* it needs human review, derived from the update's Summary and Notes
    - Group entries by the step they came from
 4. Read `PATH_TO_BRIEF_MD` — extract success criteria for the overall checklist
-5. If `.bindify/project/environment.md` exists, pull its Dev server and Verification commands into a short preamble on `verify.md` (how to start the app, open the URL, and which test/lint/build commands to run)
-6. Write `verify.md` to the plan folder using the template structure
-7. Run `update-links` for the current plan folder
+5. If `.bindify/project/environment.md` or `bindify/project/environment.md` exists, pull its Dev server and Verification commands into a short preamble on `verify.md` (how to start the app, open the URL, and which test/lint/build commands to run)
+6. Write `verify.md` to `wip-docs/verify.md` using the template structure; include Category / Feature / Plan metadata from the brief/plan headers
+7. Run `update-links` for `wip-docs/`
 
 Do not attempt to replace `verify.md` with a broader narrative summary. `verify.md` stays focused on human review of changed files and success criteria.
 
@@ -49,7 +50,7 @@ Do not attempt to replace `verify.md` with a broader narrative summary. `verify.
 
 ## Output
 
-Write to: `<plan-folder>/verify.md`
+Write to: `wip-docs/verify.md`
 
 ### Rules for the file review entries
 
@@ -68,8 +69,8 @@ Write to: `<plan-folder>/verify.md`
 
 ## Relationship to root history
 
-- `verify.md` is a review checklist derived from `updates.md`
-- `.bindify/history/entries/*.md` is a synthesized user/UI digest derived from `updates.md` plus PR/merge context
+- `verify.md` is a review checklist derived from `updates.md` (still in `wip-docs/` until migration)
+- After migration, history entries under the Bindify tracking repo synthesize the user/UI digest from the same evidence
 - Both should link to the same plan evidence, but they serve different readers and should not duplicate each other
 
 ---
