@@ -11,10 +11,11 @@ Read this whole file when bindify is in play; load command/template files from `
 
 ## When to invoke each command
 
-Fourteen commands drive bindify. Each one is a self-contained markdown file in `references/commands/`. Read the full command file before executing it.
+Fifteen commands drive bindify. Each one is a self-contained markdown file in `references/commands/`. Read the full command file before executing it.
 
 | User signal | Command | Reference file |
 |---|---|---|
+| "adapt bindify to this project" / "add a dev server command" / first-time setup in a repo | `configure-project` | `references/commands/configure-project.md` |
 | "let's coordinate updates" / "update the coordinator" | `coordinate-updates` | `references/commands/coordinate-updates.md` |
 | "capture this planning context as a brief" | `draft-brief` | `references/commands/draft-brief.md` |
 | "generate proposal from this brief" | `generate-proposal` | `references/commands/generate-proposal.md` |
@@ -103,8 +104,14 @@ Alongside this pipeline, `coordinator.md` runs in parallel as a conversation jou
 .bindify/
 ├── AGENTS.md                          ← root instructions for any agent entering the repo
 ├── commands/                          ← canonical command specs
-├── templates/                         ← brief, proposal, coordinator, verify, history, hotfixes, architecture templates
+├── templates/                         ← brief, proposal, coordinator, verify, history, hotfixes, architecture, project templates
 ├── docs/                              ← cross-feature reference docs (event schemas, etc.)
+├── project/                           ← host-project adaptation (committed here; never in the skill repo)
+│   ├── profile.md                     ← stack, category, conventions, constraints
+│   ├── environment.md                 ← how to start/run/verify this repo
+│   ├── local.md                       ← machine-local overrides (gitignored)
+│   └── commands/                      ← optional project-specific command overrides/additions
+│       └── start-dev.md               ← e.g. start localhost for a web project
 ├── history/
 │   ├── index.md                       ← compact root history overview for humans/UI
 │   └── entries/
@@ -239,11 +246,20 @@ Two natural placements, often used together:
 
 Pi discovers skills by walking up the directory tree, so the global one is found from any project. The project-local `.bindify/` overrides or extends it.
 
+## Project adaptation layer
+
+Host projects adapt Bindify via `.bindify/project/`, written by `configure-project`. That folder is path-disjoint from the synced skill surface (`SKILL.md`, `commands/`, `templates/`, `docs/`), so pulling skill updates never conflicts with project-local files.
+
+- **Committed by default** in the host repo (`profile.md`, `environment.md`, `commands/`) so teammates and CI agents share how to run the project.
+- **Machine-local only:** `project/local.md` / `project/local.*` are gitignored; never put secrets in committed project docs — reference env file paths instead.
+- **Resolution order:** `project/commands/<name>.md` overrides a canonical command of the same name; `project/environment.md` is the source of truth for start/test/lint/build — agents must not guess.
+- The Bindify skill/source repo never ships a `project/` folder; adaptation lives only in host projects.
+
 ## What to read next
 
 - `references/AGENTS.md` — concise entry-point rules for agents
 - `references/docs/workflow.md` — visual deep-dive (repo branches, link graph, orchestrator model)
 - `references/commands/<name>.md` — load on demand when invoking a command
-- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, history, hotfix, or architecture object file
+- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, history, hotfix, architecture, or project file
 
 When invoking a command, **read the full command file first**. The summaries in this skill are signposts, not substitutes.

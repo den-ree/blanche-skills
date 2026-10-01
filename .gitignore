@@ -4,3 +4,13 @@
 .vscode/
 .obsidian/
 obsidian/
+
+# UI prototypes and visualizers
+mockup/
+tapelet-bindify/
+bindify-visualizer/
+scripts/
+language-learning-app/
+docs/
+*-visualizer/
+*-visualiser/

@@ -39,8 +39,9 @@ This command prepares human review of the step-level execution evidence. It does
    - Write one sentence explaining *why* it needs human review, derived from the update's Summary and Notes
    - Group entries by the step they came from
 4. Read `PATH_TO_BRIEF_MD` — extract success criteria for the overall checklist
-5. Write `verify.md` to the plan folder using the template structure
-6. Run `update-links` for the current plan folder
+5. If `.bindify/project/environment.md` exists, pull its Dev server and Verification commands into a short preamble on `verify.md` (how to start the app, open the URL, and which test/lint/build commands to run)
+6. Write `verify.md` to the plan folder using the template structure
+7. Run `update-links` for the current plan folder
 
 Do not attempt to replace `verify.md` with a broader narrative summary. `verify.md` stays focused on human review of changed files and success criteria.
 

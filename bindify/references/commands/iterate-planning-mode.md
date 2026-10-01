@@ -48,6 +48,7 @@ If any required section is missing for `STEP_ID`, stop and report the missing se
 - Do **NOT** introduce new scope beyond the step
 - If required inputs are missing, explicitly state what is missing and stop
 - If expected outputs are ambiguous, stop and ask for clarification
+- If Done Criteria involve running or verifying the app, consult `.bindify/project/environment.md` for start/test/lint/build commands when that file exists; do not guess
 
 ---
 
