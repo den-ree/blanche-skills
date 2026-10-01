@@ -9,7 +9,8 @@ obsidian/
 mockup/
 tapelet-bindify/
 bindify-visualizer/
-scripts/
+/scripts/*
+!/scripts/verify-worktree.sh
 language-learning-app/
 docs/
 *-visualizer/
