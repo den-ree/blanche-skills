@@ -23,9 +23,12 @@ Example — `draft-brief`:
 
 ## Active work vs durable history
 
-- **Active feature docs** live in `wip-docs/` at the **host project root** (flat).
+- **Active feature docs** live in `wip-docs/` at the **host project root** (flat), on product branch `plan/<plan-name>` after `publish-plan` (reuse existing `plan/` branch; parent may be `release/*` or `feature/*`; opens a **draft** PR).
 - **Durable history / architecture** live in the Bindify tracking repo at `.bindify/` or `bindify/`.
 - Do **not** write active plan artifacts into the Bindify submodule during apply. Migrate via `publish-bindify-pr` / `log-pr` when packaging.
+- `publish-plan` only ensures the **product** `plan/` branch + draft PR — it never snapshots into tracking and never creates a `feature/` branch from the plan name.
+- When `iterate-planning-mode` finishes the last step, it marks that draft PR ready for review.
+- Plan-step commits are one-per-step and authored as `blanche <blanche@bindify.app>` via `--author` (never change git config).
 
 ## Hard rules
 
@@ -40,6 +43,7 @@ Example — `draft-brief`:
 - **Word limits:** Briefs must be ≤ 150 words. Proposals must be ≤ 250 words.
 - **Prototype-first:** User-facing features must implement a mock UI prototype in Step-001 before wiring logic.
 - **WIP location:** Active brief/proposal/plan/updates/verify/coordinator → `wip-docs/` only.
+- **Git branch:** Only `plan/<plan-name>` for implementation. Never create `feature/...` from a plan branch. `FEATURE_NAME` is metadata, not a branch.
 
 ## Cloud & Linux Agent Execution (e.g. Cursor Cloud)
 

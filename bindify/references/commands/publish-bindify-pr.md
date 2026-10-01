@@ -7,9 +7,9 @@ The Bindify repo is a **submodule or nested repo inside the product repo** (path
 This command migrates WIP artifacts, commits them on a branch in that repo, opens a PR, bumps the submodule
 pointer in the product repo, and removes `wip-docs/` from the host root.
 
-Distinct from `publish-plan`: `publish-plan` may push a *plan branch* up front; `publish-bindify-pr`
-publishes the *log of what a merged/under-review PR did* after the fact and is the primary **WIP → Bindify**
-migration step.
+Distinct from `publish-plan`:
+- `publish-plan` only kickstarts the **product** branch with committed `wip-docs/` (no Bindify writes).
+- `publish-bindify-pr` is the **only** WIP → Bindify migration/publish step, run after the product PR exists.
 
 ---
 

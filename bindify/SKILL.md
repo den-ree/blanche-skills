@@ -32,7 +32,7 @@ These commands drive bindify. Each one is a self-contained markdown file in `ref
 | "capture this planning context as a brief" | `draft-brief` | `references/commands/draft-brief.md` |
 | "generate proposal from this brief" | `generate-proposal` | `references/commands/generate-proposal.md` |
 | "save this as a plan" / proposal has been approved | `save-agent-plan` | `references/commands/save-agent-plan.md` |
-| "/bindify" / "publish this plan branch" | `publish-plan` | `references/commands/publish-plan.md` |
+| "/bindify" / "publish this plan" / kick off product plan branch | `publish-plan` | `references/commands/publish-plan.md` |
 | "run step N" / "execute Step-003" / "/iterate-planning-mode" / orchestrator delegating a step | `iterate-planning-mode` | `references/commands/iterate-planning-mode.md` |
 | "prototype this" / "/prototype-mode" / Step-001 UI mock before real wiring | `prototype-mode` | `references/commands/prototype-mode.md` |
 | "verify this branch" / "/verify-worktree" / open or test an agent branch on macOS | `verify-worktree` | `references/commands/verify-worktree.md` |
@@ -59,18 +59,19 @@ flowchart TD
     savePlan["save-agent-plan"]
     planMd["wip-docs/plan.md"]
     publishPlan["publish-plan"]
-    planBranch["plan/plan-name branch"]
+    planBranch["product plan/plan-name + draft PR"]
     iterate["iterate-planning-mode"]
     summarize["summarize-work-for-updates"]
     updatesMd["wip-docs/updates.md"]
     genVerify["generate-verify"]
     verifyMd["wip-docs/verify.md"]
+    prReady["mark draft PR ready for review"]
     migrate["publish-bindify-pr migrates wip-docs"]
     genHistory["generate-history-summary"]
     historyIndex["history/index.md"]
     historyEntry["history/entries/<date>-<slug>.md"]
     humanSignoff["human sign-off"]
-    prCreated["PR created"]
+    prCreated["PR ready / in review"]
     mergeMain["merge to main"]
 
     coordinate["coordinate-updates"]
@@ -90,11 +91,12 @@ flowchart TD
     iterate --> summarize
     summarize --> updatesMd
     updatesMd -->|"more steps"| iterate
-    updatesMd --> genVerify
+    updatesMd -->|"all steps done"| genVerify
     genVerify --> verifyMd
-    verifyMd --> humanSignoff
-    humanSignoff --> prCreated
-    prCreated --> migrate
+    verifyMd --> prReady
+    prReady --> prCreated
+    prCreated --> humanSignoff
+    humanSignoff --> migrate
     migrate --> genHistory
     genHistory --> historyEntry
     genHistory --> historyIndex
@@ -226,10 +228,10 @@ explain the combined effect on features, architecture, and adjacent docs/researc
 Each PR is a unit of change. The vision flow:
 
 1. Human + agent plan a feature at a high level → write into `wip-docs/` (`coordinator.md` + `brief.md` + `proposal.md`).
-2. Agent implements step 1 in planning mode → `wip-docs/plan.md` + `iterate-planning-mode`.
-3. Each implementation step appends a bounded, architecture-aware entry to `wip-docs/updates.md`.
-4. `generate-verify` builds the human review checklist as `wip-docs/verify.md`.
-5. Once the product PR exists, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/<plans>/<plan>/`, merges `coordinator.md`, and deletes `wip-docs/`.
+2. After approval, `save-agent-plan` writes `wip-docs/plan.md`; `publish-plan` ensures product branch `plan/<plan-name>` (reusing it if it already exists; forking from the current parent like `release/*` or `feature/*` only when needed) has committed `wip-docs/`, is pushed, and opens a **draft** PR — no Bindify submodule writes, no `feature/` branch inventing.
+3. Agent implements steps via `iterate-planning-mode` against `wip-docs/plan.md`; each step appends to `wip-docs/updates.md`.
+4. When every step has an updates entry, `iterate-planning-mode` finish path runs `generate-verify` and marks the draft PR **ready for review**.
+5. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, and deletes `wip-docs/`.
 6. `generate-history-summary` creates or refreshes a root history entry and updates `history/index.md`.
 7. `log-pr` records alignment against `standard`/`pattern` objects and runs `scan-architecture fill`.
 8. After merge, `generate-history-summary` runs again in `merged` mode so the root history reflects final outcome and status.
@@ -238,6 +240,7 @@ Each PR is a unit of change. The vision flow:
 ## Hard rules
 
 - **Active docs live in `wip-docs/` until migration.** Do not write active brief/proposal/plan/updates/verify/coordinator into the Bindify submodule during apply.
+- **Implementation git branch is only `plan/...`.** Never create `feature/...` (or any other branch) from a plan branch. `FEATURE_NAME` in docs is metadata, not a branch name. Executors stay on the existing `plan/` head.
 - **Never modify `plan.md` during apply.** Execution state goes into `updates.md` only.
 - **Every update entry needs Impact & Connections + Architecture sections.** No flat changelogs.
 - **Architecture `Responsibility` is human-owned.** `scan-architecture fill` appends change-log lines and edges only — it never rewrites a responsibility.
@@ -263,13 +266,20 @@ For the orchestrator vs executor model, see `references/docs/workflow.md`.
 
 ## Git tracking workflow
 
-Bindify tracking runs in a dedicated bindify repository tied to one product, even when product code spans multiple repos.
+Two git surfaces, different jobs:
 
-- `main` is stable history.
-- Every approved plan is published to `plan/<plan-name>` via `publish-plan`.
-- Executor updates and hotfix logs are committed to the active plan branch.
-- Root history summaries are generated when a PR is created and refreshed after merge to `main`.
-- Human sign-off on `verify.md` gates merge back to `main`.
+**Product repo**
+- `publish-plan` ensures product branch `plan/<plan-name>` has committed `wip-docs/`, is pushed, and opens a **draft** PR into the parent (`main`, `release/*`, `feature/*`, …) so draft-created triggers can start executors.
+- Parent/`BASE` is the current branch when it is `main`, `release/*`, `feature/*`, etc. Implementation always stays on `plan/...`.
+- If `plan/<plan-name>` already exists, reuse it — never create `feature/...` from this command, and never fork a new branch while already on the matching `plan/` branch.
+- Executors commit **one commit per plan step** on that `plan/` branch via `iterate-planning-mode`, authored as `blanche <blanche@bindify.app>` (per-commit `--author`, never global git config).
+- When the last plan step is done, `iterate-planning-mode` runs `generate-verify` (separate commit), then marks the draft PR **ready for review**.
+- Human sign-off on `wip-docs/verify.md` / the ready PR gates merge.
+
+**Bindify tracking repo** (`.bindify/` or `bindify/`, often a submodule)
+- Untouched during apply.
+- `publish-bindify-pr` / `log-pr` migrate completed WIP into `development/...`, write history/architecture, open a Bindify `log/pr-*` PR, and bump the submodule pointer.
+- Tracking `main` is stable durable history after those log PRs merge.
 
 See `references/docs/workflow.md` for the repo and branch diagram.
 

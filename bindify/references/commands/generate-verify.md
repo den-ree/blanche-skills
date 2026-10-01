@@ -14,8 +14,8 @@ This command prepares human review of the step-level execution evidence. It does
 
 `generate-verify` comes before root history summarization and WIP migration. The usual order is:
 1. complete step work in `wip-docs/updates.md`
-2. run `generate-verify` → `wip-docs/verify.md`
-3. open PR / obtain PR context
+2. run `generate-verify` → `wip-docs/verify.md` (also invoked automatically from `iterate-planning-mode` finish path)
+3. mark the product draft PR ready for review (`gh pr ready`) — done by `iterate-planning-mode` finish path
 4. migrate via `log-pr` / `publish-bindify-pr`
 5. run `generate-history-summary`
 
@@ -43,6 +43,7 @@ This command prepares human review of the step-level execution evidence. It does
 5. If `.bindify/project/environment.md` or `bindify/project/environment.md` exists, pull its Dev server and Verification commands into a short preamble on `verify.md` (how to start the app, open the URL, and which test/lint/build commands to run)
 6. Write `verify.md` to `wip-docs/verify.md` using the template structure; include Category / Feature / Plan metadata from the brief/plan headers
 7. Run `update-links` for `wip-docs/`
+8. If invoked standalone (not already inside `iterate-planning-mode` finish path), remind the caller to mark the product draft PR ready for review — or run that finish path
 
 Do not attempt to replace `verify.md` with a broader narrative summary. `verify.md` stays focused on human review of changed files and success criteria.
 
