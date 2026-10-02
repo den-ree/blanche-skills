@@ -28,13 +28,14 @@ Example — `draft-brief`:
 - Do **not** write active plan artifacts into the Bindify submodule during apply. Migrate via `publish-bindify-pr` / `log-pr` when packaging.
 - `publish-plan` only ensures the **product** `plan/` branch + draft PR — it never snapshots into tracking and never creates a `feature/` branch from the plan name.
 - After `publish-plan`, the **planner waits** for the draft PR to become ready for review; a **separate executor** runs `iterate-planning-mode`.
-- Executor stays on the draft PR's `plan/` head: no new branches; all step commits push there; finish path runs `gh pr ready` on that draft.
-- When `iterate-planning-mode` finishes the last step, it marks that draft PR ready for review.
+- Executor stays on the triggering draft head (`plan/<leaf>` or `plan-fixes/<leaf>`): no new branches; all step commits push there; finish path runs `gh pr ready` on that draft.
+- When `iterate-planning-mode` finishes the last unfinished step, it marks that draft PR ready for review and stops committing on that branch.
+- `ready_for_review` on `plan/*` starts a **reviewer** (`review-plan`). In-scope misses become appended steps on `plan-fixes/<leaf>` with one draft PR into the plan branch. Improvements stay PR comments. `ready_for_review` on `plan-fixes/*` does not start another reviewer.
 - Plan-step commits are one-per-step and authored as `blanche <blanche@bindify.app>` via `--author` (never change git config).
 
 ## Hard rules
 
-- Never modify `plan.md` during apply; execution state belongs in `updates.md`.
+- Never modify existing plan steps during apply; execution state belongs in `updates.md`. `review-plan` may append new steps on `plan-fixes/` only.
 - `updates.md` and `hotfixes.md` are append-only.
 - Every update entry carries **Impact & Connections** + **Architecture** sections — logs connect changes to the architecture graph, they are not flat changelogs.
 - Architecture object **Responsibility** is human-owned; `scan-architecture fill` only appends change-log lines and edges.
@@ -45,7 +46,7 @@ Example — `draft-brief`:
 - **Word limits:** Briefs must be ≤ 150 words. Proposals must be ≤ 250 words.
 - **Prototype-first:** User-facing features must implement a mock UI prototype in Step-001 before wiring logic.
 - **WIP location:** Active brief/proposal/plan/updates/verify/coordinator → `wip-docs/` only.
-- **Git branch:** Only `plan/<plan-name>` for implementation. Never create `feature/...` from a plan branch. `FEATURE_NAME` is metadata, not a branch.
+- **Git branch:** Implementation is `plan/<leaf>`, plus at most one `plan-fixes/<leaf>` created by `review-plan` (draft targets the plan branch). Executors never create a branch. Never create `feature/...`. `FEATURE_NAME` is metadata, not a branch.
 
 ## Cloud & Linux Agent Execution (e.g. Cursor Cloud)
 

@@ -134,10 +134,14 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
    - Stay idle on this workstream until the draft becomes a **ready-for-review / open** PR (`isDraft: false`), which the executor does at the end of the last step.
    - Poll or wait for that transition, e.g.:
      ```bash
-     gh pr view <number> --json isDraft,state,url
+     gh pr view <number> --json isDraft,state,url,headRefName
      ```
      Continue only when `isDraft` is `false` and `state` is `OPEN` (ready for review).
-   - After the PR is ready for review, the planner may help with human review, `log-pr` / `publish-bindify-pr`, or other post-apply work — still not re-implement steps already done.
+   - That ready transition starts **`review-plan`** (a separate reviewer), not the planner. Do not implement, do not append fix steps, and do not create `plan-fixes/`.
+   - Stay idle again until the review round settles:
+     - `review-plan` reports no in-scope misses, or
+     - the `plan-fixes/<leaf>` draft is ready and a human has merged it into `plan/<leaf>`
+   - After that, the planner may help with human review, `log-pr` / `publish-bindify-pr`, or other post-apply work — still not re-implement steps already done.
 
 ---
 
@@ -175,5 +179,6 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 
 - `[[references/commands/save-agent-plan.md]]`
 - `[[references/commands/iterate-planning-mode.md]]`
+- `[[references/commands/review-plan.md]]`
 - `[[references/commands/generate-verify.md]]`
 - `[[references/commands/publish-bindify-pr.md]]`

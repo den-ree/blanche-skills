@@ -10,6 +10,8 @@ Record unplanned bug fixes in `hotfixes.md` and connect them to impacted bindify
 - The human or another agent applied a fix directly in Agent mode
 - The team wants traceability between hotfixes and existing plans/features
 
+Do not use this command for misses found on an open `plan/*` PR. That round is `review-plan`: append steps on `plan-fixes/<leaf>` and let the executor implement them. `hotfixes.md` stays the log for unplanned fixes outside that round.
+
 ---
 
 ## Inputs

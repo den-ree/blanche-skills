@@ -34,6 +34,7 @@ These commands drive bindify. Each one is a self-contained markdown file in `ref
 | "save this as a plan" / proposal has been approved | `save-agent-plan` | `references/commands/save-agent-plan.md` |
 | "/bindify" / "publish this plan" / kick off product plan branch | `publish-plan` | `references/commands/publish-plan.md` |
 | "run step N" / "execute Step-003" / "/iterate-planning-mode" / orchestrator delegating a step | `iterate-planning-mode` | `references/commands/iterate-planning-mode.md` |
+| "review the open plan PR" / ready-for-review on `plan/*` | `review-plan` | `references/commands/review-plan.md` |
 | "prototype this" / "/prototype-mode" / Step-001 UI mock before real wiring | `prototype-mode` | `references/commands/prototype-mode.md` |
 | "verify this branch" / "/verify-worktree" / open or test an agent branch on macOS | `verify-worktree` | `references/commands/verify-worktree.md` |
 | Right after a step finishes, before moving on | `summarize-work-for-updates` | `references/commands/summarize-work-for-updates.md` |
@@ -66,12 +67,13 @@ flowchart TD
     genVerify["generate-verify"]
     verifyMd["wip-docs/verify.md"]
     prReady["mark draft PR ready for review"]
+    reviewPlan["review-plan"]
+    fixesDraft["plan-fixes draft into plan branch"]
     migrate["publish-bindify-pr migrates wip-docs"]
     genHistory["generate-history-summary"]
     historyIndex["history/index.md"]
     historyEntry["history/entries/<date>-<slug>.md"]
     humanSignoff["human sign-off"]
-    prCreated["PR ready / in review"]
     mergeMain["merge to main"]
 
     coordinate["coordinate-updates"]
@@ -94,8 +96,11 @@ flowchart TD
     updatesMd -->|"all steps done"| genVerify
     genVerify --> verifyMd
     verifyMd --> prReady
-    prReady --> prCreated
-    prCreated --> humanSignoff
+    prReady -->|"head plan/"| reviewPlan
+    prReady -->|"head plan-fixes/"| humanSignoff
+    reviewPlan -->|"clean"| humanSignoff
+    reviewPlan -->|"in-scope misses"| fixesDraft
+    fixesDraft --> iterate
     humanSignoff --> migrate
     migrate --> genHistory
     genHistory --> historyEntry
@@ -197,6 +202,7 @@ Canonical command specs and templates always come from the **skill** (`reference
 | review | `wip-docs/proposal.md` (annotated) | human |
 | apply | `wip-docs/plan.md` + `wip-docs/updates.md` | AI via `iterate-planning-mode` |
 | verify | `wip-docs/verify.md` | human checklist |
+| review | open `plan/` PR | AI via `review-plan` (append-only fix steps on `plan-fixes/`) |
 | migrate | copy into Bindify `development/...` + remove `wip-docs/` | AI via `publish-bindify-pr` / `log-pr` |
 | summarize-for-history | `.bindify/history/index.md` + `.bindify/history/entries/<date>-<slug>.md` | AI via `generate-history-summary` |
 
@@ -230,18 +236,20 @@ Each PR is a unit of change. The vision flow:
 1. Human + agent plan a feature at a high level → write into `wip-docs/` (`coordinator.md` + `brief.md` + `proposal.md`).
 2. After approval, `save-agent-plan` writes `wip-docs/plan.md`; `publish-plan` ensures product branch `plan/<plan-name>` (reusing it if it already exists; forking from the current parent like `release/*` or `feature/*` only when needed) has committed `wip-docs/`, is pushed, and opens a **draft** PR — no Bindify submodule writes, no `feature/` branch inventing.
 3. The **planner** agent that ran `publish-plan` **stops and waits** for the draft to become ready for review. A **separate executor** agent (draft-created trigger) runs `iterate-planning-mode` against `wip-docs/plan.md`; each step appends to `wip-docs/updates.md`.
-4. When every step has an updates entry, the executor finish path runs `generate-verify` and marks the draft PR **ready for review** — that is the signal the planner may resume post-apply help.
-5. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, and deletes `wip-docs/`.
-6. `generate-history-summary` creates or refreshes a root history entry and updates `history/index.md`.
-7. `log-pr` records alignment against `standard`/`pattern` objects and runs `scan-architecture fill`.
-8. After merge, `generate-history-summary` runs again in `merged` mode so the root history reflects final outcome and status.
-9. `publish-bindify-pr` opens a PR to the Bindify submodule with the migrated logs + architecture updates.
+4. When every step has an updates entry, the executor finish path runs `generate-verify` and marks the draft PR **ready for review** (`gh pr ready`). The executor stops. It does not keep committing on `plan/<leaf>`.
+5. A **reviewer** agent runs `review-plan` on that ready PR when the head is `plan/*`. It compares the diff to the brief, the plan, and `updates.md`. Improvements are a PR comment only. In-scope misses (unmet done criteria, unmet brief success criteria, missing or wrong planned behavior) are appended as new steps — existing steps stay unchanged — on branch `plan-fixes/<leaf>` (same leaf as `plan/<leaf>`). That branch gets one **draft** PR whose base is the plan branch, not `main` or `release/*`. This round happens once.
+6. Draft-created on `plan-fixes/*` starts the executor again, only for the new steps. The finish path marks **that** draft ready. `ready_for_review` on `plan-fixes/*` does not start another reviewer. A human merges the fixes PR into the plan branch, or reviews the plan PR directly when `review-plan` found nothing to schedule.
+7. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, and deletes `wip-docs/`.
+8. `generate-history-summary` creates or refreshes a root history entry and updates `history/index.md`.
+9. `log-pr` records alignment against `standard`/`pattern` objects and runs `scan-architecture fill`.
+10. After merge, `generate-history-summary` runs again in `merged` mode so the root history reflects final outcome and status.
+11. `publish-bindify-pr` opens a PR to the Bindify submodule with the migrated logs + architecture updates.
 
 ## Hard rules
 
 - **Active docs live in `wip-docs/` until migration.** Do not write active brief/proposal/plan/updates/verify/coordinator into the Bindify submodule during apply.
-- **Implementation git branch is only `plan/...`.** Never create `feature/...` (or any other branch) from a plan branch. `FEATURE_NAME` in docs is metadata, not a branch name. Executors stay on the existing `plan/` head.
-- **Never modify `plan.md` during apply.** Execution state goes into `updates.md` only.
+- **Implementation branches are `plan/<leaf>` and, after review, one `plan-fixes/<leaf>`.** `publish-plan` creates the plan branch. Only `review-plan` may create `plan-fixes/<leaf>`, and its draft PR targets the plan branch. Never create `feature/...`. Executors never create a branch; they stay on the draft head that triggered them. `FEATURE_NAME` in docs is metadata, not a branch name.
+- **Never modify existing plan steps during apply.** Execution state goes into `updates.md` only. After the plan PR is open, `review-plan` may append new steps on `plan-fixes/` only.
 - **Every update entry needs Impact & Connections + Architecture sections.** No flat changelogs.
 - **Architecture `Responsibility` is human-owned.** `scan-architecture fill` appends change-log lines and edges only — it never rewrites a responsibility.
 - **`updates.md` is append-only.** Initialize with a feature overview on first creation; never rewrite past entries.
@@ -262,6 +270,8 @@ Bindify is the glue between an orchestrator agent (Claude Code, Cursor) and exec
 
 Executors only need to know one thing per invocation: which `STEP_ID` in which `plan.md`. They read the step, do the work, append to `updates.md`, exit.
 
+The reviewer is a third role. After a `plan/*` PR is ready, `review-plan` either comments that the plan is clean or appends in-scope fix steps and opens one `plan-fixes/<leaf>` draft. It does not implement. `ready_for_review` on `plan-fixes/*` goes to a human.
+
 For the orchestrator vs executor model, see `references/docs/workflow.md`.
 
 ## Git tracking workflow
@@ -270,12 +280,13 @@ Two git surfaces, different jobs:
 
 **Product repo**
 - `publish-plan` ensures product branch `plan/<plan-name>` has committed `wip-docs/`, is pushed, and opens a **draft** PR into the parent (`main`, `release/*`, `feature/*`, …) so draft-created triggers can start **executor** agents.
-- The **planner** that ran `publish-plan` does not implement; it waits until the draft is marked ready for review.
-- Parent/`BASE` is the current branch when it is `main`, `release/*`, `feature/*`, etc. Implementation always stays on `plan/...`.
+- The **planner** that ran `publish-plan` does not implement. It waits until the draft is marked ready for review, then waits again while `review-plan` runs. If that opens a fixes draft, it waits until a human merges `plan-fixes/<leaf>` into `plan/<leaf>`.
+- Parent/`BASE` is the current branch when it is `main`, `release/*`, `feature/*`, etc. Original implementation stays on `plan/<leaf>`. The one review round uses `plan-fixes/<leaf>` stacked onto that branch.
 - If `plan/<plan-name>` already exists, reuse it — never create `feature/...` from this command, and never fork a new branch while already on the matching `plan/` branch.
-- Executors commit **one commit per plan step** on that **same** `plan/` draft-PR head via `iterate-planning-mode`, authored as `blanche <blanche@bindify.app>` (per-commit `--author`, never global git config). Never create a new branch during iterate.
-- When the last plan step is done, `iterate-planning-mode` runs `generate-verify` (separate commit), pushes the same branch, then marks **that** draft PR **ready for review** (`gh pr ready`).
-- Human sign-off on `wip-docs/verify.md` / the ready PR gates merge.
+- Executors commit **one commit per plan step** on the draft-PR head that triggered them (`plan/<leaf>` or, for the review round, `plan-fixes/<leaf>`) via `iterate-planning-mode`, authored as `blanche <blanche@bindify.app>` (per-commit `--author`, never global git config). Never create a new branch during iterate.
+- When the last unfinished step is done, `iterate-planning-mode` runs `generate-verify` (separate commit), pushes the same branch, then marks **that** draft PR **ready for review** (`gh pr ready`). After that, `plan/<leaf>` stays frozen so a fixes append can merge.
+- `ready_for_review` on `plan/*` starts `review-plan`. That command either comments that the plan is clean, or appends in-scope fix steps and opens one draft from `plan-fixes/<leaf>` into `plan/<leaf>`. `ready_for_review` on `plan-fixes/*` does not start another reviewer.
+- Human sign-off on `wip-docs/verify.md` / the ready plan PR gates merge. When a fixes draft exists, merge it into the plan branch before that sign-off.
 
 **Bindify tracking repo** (`.bindify/` or `bindify/`, often a submodule)
 - Untouched during apply.
