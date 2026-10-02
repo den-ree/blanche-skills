@@ -2,15 +2,29 @@
 
 Execute exactly one step from an existing `plan.md` and produce only that step's declared outputs.
 
-When that step is the **last unfinished step**, finish the apply loop: write `verify.md`, push, and mark the product PR **ready for review** (converting the draft opened by `publish-plan`).
+When that step is the **last unfinished step**, finish the apply loop: write `verify.md`, push to the **same** draft-PR head branch, and mark **that** draft PR ready for review.
 
-## Branch hard rule
+This command is for the **executor** agent (usually draft-PR triggered). The planner that ran `publish-plan` must not run this unless the human explicitly overrides.
 
-- Work **only** on the current `plan/<plan-name>` branch.
-- **Never** create `feature/...`, `feat/...`, or any other new branch from `plan/...`.
-- **Never** run `git checkout -b` / `git switch -c` during this command.
-- `FEATURE_NAME` in `wip-docs/` headers is **metadata only** (migration path) — it is **not** a git branch name.
-- If not already on `plan/...`, stop and ask. Do not invent a branch.
+---
+
+## Branch lock (non-negotiable)
+
+1. Resolve the draft PR head branch first:
+   ```bash
+   gh pr list --state open --json number,isDraft,headRefName,url \
+     --jq '.[] | select(.isDraft==true and (.headRefName|startswith("plan/")))'
+   ```
+   Or use the PR that triggered this agent. Preferred head = that PR's `headRefName` (must be `plan/...`).
+2. Checkout **exactly** that branch. Do not create anything new.
+3. **Forbidden for the entire command** (including finish path):
+   - `git checkout -b` / `git switch -c`
+   - creating `feature/...`, `feat/...`, `fix/...`, or any branch that is not the existing draft head
+   - opening a second PR with a different head
+4. `FEATURE_NAME` / Category `features` in `wip-docs/` are **metadata only** — never git branch names.
+5. If you are not on the draft PR's `plan/...` head, stop and ask. Do not invent a branch.
+6. Every commit and push in this command goes to **that same branch only**.
+
 ---
 
 ## Inputs
@@ -22,7 +36,8 @@ When that step is the **last unfinished step**, finish the apply loop: write `ve
 | `STEP_ID` | yes | Exact step identifier in `Step-###` format (e.g., `Step-002`) |
 | `LIST_OF_EXISTING_MD_FILES` | no | Additional repo-relative context docs |
 | `SUMMARISE_FILE` | no | Optional summary file for quick context |
-| `MARK_PR_READY` | no | Defaults to `true`. When the plan is complete, mark the draft PR ready for review |
+| `MARK_PR_READY` | no | Defaults to `true`. When the plan is complete, mark the **existing draft** PR ready for review |
+| `DRAFT_PR` | no | PR number/URL if known (preferred when the agent was triggered by draft-created) |
 
 ---
 
@@ -44,6 +59,7 @@ If any required section is missing for `STEP_ID`, stop and report the missing se
 
 Read `references/docs/working-style.md` first. Chat is caveman. Code comments and `updates.md` stay normal prose.
 
+0. **Lock branch** — follow [Branch lock](#branch-lock-non-negotiable). Confirm `git branch --show-current` equals the draft PR `headRefName` and starts with `plan/`.
 1. Read `PATH_TO_PLAN_MD` (default `wip-docs/plan.md`) and locate `STEP_ID` exactly
 2. Validate required schema exists for that step
 3. Check for test failure context:
@@ -58,7 +74,8 @@ Read `references/docs/working-style.md` first. Chat is caveman. Code comments an
 6. Validate completion against that step's `Done Criteria`
 7. Do not execute or prepare adjacent steps
 8. Append evidence via `summarize-work-for-updates` → `wip-docs/updates.md`
-9. **One commit per step** on the current `plan/...` branch (required when there are changes):
+9. **One commit per step** on the **locked draft-PR head branch** (required when there are changes):
+   - Confirm still on the same branch before committing
    - Stage only this step's code outputs + the new `wip-docs/updates.md` entry (and any step-local docs)
    - Do **not** squash multiple steps into one commit
    - Do **not** leave step work uncommitted
@@ -70,18 +87,18 @@ Read `references/docs/working-style.md` first. Chat is caveman. Code comments an
      EOF
      )"
      ```
-   - Push the branch after the commit
+   - Push **this same branch** after the commit (`git push origin HEAD`). Never push a differently named branch.
 10. **Completion check** — after this step's update is committed, decide whether the plan is finished:
     - List every `Step-###` in `plan.md`
     - Confirm each has a corresponding section in `wip-docs/updates.md`
-    - If any step is still missing an updates entry → stop here and report the next `STEP_ID`
+    - If any step is still missing an updates entry → stop here and report the next `STEP_ID` (draft stays draft)
     - If **all** steps have updates entries → run the [Finish path](#finish-path-plan-complete)
 
 ---
 
 ## Finish path (plan complete)
 
-Run only when every plan step has an `updates.md` entry:
+Run only when every plan step has an `updates.md` entry. Still on the **same** draft-PR head branch — no new branch.
 
 1. Run `generate-verify` → `wip-docs/verify.md`
 2. Commit `wip-docs/verify.md` as its **own** commit (do not fold into the last step commit) with blanche author:
@@ -92,24 +109,20 @@ Run only when every plan step has an `updates.md` entry:
    EOF
    )"
    ```
-3. Push the branch
-4. Resolve the product PR for this head branch:
+3. Push the **same** branch again
+4. Resolve the draft PR whose **head is this branch** (the one `publish-plan` opened):
    ```bash
-   gh pr list --head <current-branch> --json number,isDraft,url,baseRefName,state
+   gh pr list --head "$(git branch --show-current)" --json number,isDraft,url,baseRefName,state,headRefName
    ```
 5. If `MARK_PR_READY` is `true` (default):
-   - If a **draft** PR exists → mark it ready for review:
+   - **Required:** a draft PR with `headRefName` == current branch must exist → mark **that** draft ready for review:
      ```bash
      gh pr ready <number>
      ```
-   - If an open non-draft PR already exists → leave it; report the URL
-   - If **no** PR exists → create a **ready-for-review** PR into the parent/`BASE` (infer from branch history or ask; do not invent `feature/...`):
-     ```bash
-     gh pr create --base <BASE> --head <current-branch> \
-       --title "Plan: <plan-name>" \
-       --body "<summary + link to wip-docs/plan.md + wip-docs/verify.md>"
-     ```
-6. Report: plan complete, verify path, PR URL, and that human review can start
+   - Verify afterward: `gh pr view <number> --json isDraft` → `isDraft` must be `false`
+   - If an open non-draft PR already exists for this head → leave it; report the URL
+   - If **no** PR exists for this head → stop and ask (do **not** create a new branch; creating a PR is allowed only with `--head` set to the **current** `plan/` branch and the known parent/`BASE` — never invent `feature/...`)
+6. Report: plan complete, verify path, PR URL, and that the draft was switched to ready for review
 7. Do **not** migrate into Bindify here — that remains `publish-bindify-pr` / `log-pr` after the product PR exists
 
 ---
@@ -120,6 +133,7 @@ All product commits created by this command (step commits + verify commit):
 
 | Rule | Detail |
 |---|---|
+| Branch | Only the draft PR head (`plan/...`) — never a new branch |
 | Granularity | Exactly **one git commit per `STEP_ID`** |
 | Author | `--author="blanche <blanche@bindify.app>"` |
 | Config | Never run `git config` to change user.name / user.email |
@@ -127,6 +141,7 @@ All product commits created by this command (step commits + verify commit):
 | Scope | Only that step's files + its `updates.md` append |
 
 `publish-plan`'s initial `wip-docs` publish commit also uses the same blanche author.
+
 ---
 
 ## Prototype Steps (Prototype-First Mode)
@@ -163,7 +178,17 @@ When executing on a Linux cloud agent (e.g. Cursor Cloud Agents) in a macOS/Appl
 - Mid-plan: leave the publish-plan **draft** PR as draft. Only mark ready when the finish path runs.
 - One commit per step; author is always blanche via `--author` (never change git config)
 - Do not combine multiple steps, or step work + verify, into a single commit
-- **Never create a `feature/` (or any non-`plan/`) branch.** Stay on the existing `plan/` head. `FEATURE_NAME` ≠ branch name.
+- **Never create any new git branch.** Commit and push only on the draft PR's existing `plan/` head. `FEATURE_NAME` ≠ branch name.
+- Finish path must call `gh pr ready` on **that** draft — do not open a different-head PR.
+
+---
+
+## Acceptance criteria
+
+- Current branch stayed the draft PR `plan/...` head for the whole run
+- No `feature/` (or other) branch was created
+- Each completed step has its own blanche commit on that branch and was pushed
+- On plan completion: `verify.md` committed, same branch pushed, draft PR marked ready (`isDraft: false`)
 
 ---
 
@@ -174,7 +199,7 @@ After every step:
 
 After the last step (finish path):
 - [generate-verify](./generate-verify.md)
-- Product PR ready for review (`gh pr ready` or create non-draft PR)
+- Same draft PR switched to ready for review (`gh pr ready`)
 
 ---
 

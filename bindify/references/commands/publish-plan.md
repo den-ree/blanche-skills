@@ -1,8 +1,8 @@
 # Command: publish-plan
 
-Kick off execution on the **product** repo: put approved `wip-docs/` on a per-plan product branch, push it, and open a **draft** pull request so draft-created automations can start executor agents.
+Kick off execution on the **product** repo: put approved `wip-docs/` on a per-plan product branch, push it, and open a **draft** pull request so draft-created automations can start a **separate executor agent**.
 
-This is **not** a Bindify-tracking publish. Do not copy into `.bindify/` / `bindify/`. Durable migration happens later via `publish-bindify-pr` / `log-pr`.
+The agent that runs `publish-plan` is the **planner**. It must **not** implement the plan. It waits until the draft PR is marked ready for review (executor finished). Durable Bindify migration still happens later via `publish-bindify-pr` / `log-pr`.
 
 ---
 
@@ -121,12 +121,23 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
    - If `gh` is unavailable, push the branch and report the compare URL for manual draft PR creation; stop and say draft automation will not fire until a draft PR exists.
    - Report the draft PR URL prominently — this is the handoff signal for draft-created agent triggers.
 
-6. Return handoff context
+6. Return handoff context — then **STOP**
    - Report implementation branch (`plan/<plan-name>`), parent/`BASE`, whether branch was created or reused
    - Report **draft PR URL** (or existing PR URL)
-   - Report `wip-docs/plan.md` as the executor plan path
-   - Next command: `iterate-planning-mode` with `PATH_TO_PLAN_MD=wip-docs/plan.md`
+   - Report `wip-docs/plan.md` as the path the **executor** agent will use
+   - Tell the human: draft is published; a different agent should implement via `iterate-planning-mode`
    - Remind: Bindify migration is deferred to `publish-bindify-pr` after the product PR is ready/merged
+
+7. Planner wait gate (mandatory for the agent that ran `publish-plan`)
+   - **Do not** run `iterate-planning-mode`, edit product code, or mark the PR ready yourself.
+   - Implementation belongs to a **separate executor agent** triggered by the draft PR (or explicitly started by the human).
+   - Stay idle on this workstream until the draft becomes a **ready-for-review / open** PR (`isDraft: false`), which the executor does at the end of the last step.
+   - Poll or wait for that transition, e.g.:
+     ```bash
+     gh pr view <number> --json isDraft,state,url
+     ```
+     Continue only when `isDraft` is `false` and `state` is `OPEN` (ready for review).
+   - After the PR is ready for review, the planner may help with human review, `log-pr` / `publish-bindify-pr`, or other post-apply work — still not re-implement steps already done.
 
 ---
 
@@ -138,6 +149,7 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 - Never create a new branch while already on the matching `plan/` branch
 - Never push plan content directly to parent branches (`main`, `release/*`, `feature/*`)
 - Default to a **draft** PR; do not mark ready for review in this command
+- **Planner ≠ executor:** after opening the draft, the publishing agent must wait for ready-for-review — do not implement steps in the same session unless the human explicitly overrides
 - Do not create the plan branch / draft without a reviewed proposal
 - Do not delete `wip-docs/`
 - Do not snapshot or copy WIP into tracking `development/`
@@ -154,7 +166,8 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 - `wip-docs/` plan artifacts are committed and pushed on that branch
 - A draft PR exists from `plan/<plan-name>` into `BASE` (unless `DRAFT_PR=false`)
 - No writes into `.bindify/` / `bindify/`
-- Handoff reports branch, draft PR URL, `wip-docs/plan.md`, and next step `iterate-planning-mode`
+- Handoff reports branch, draft PR URL, and that the planner is waiting for the draft to become ready for review
+- The publishing agent did **not** start `iterate-planning-mode` unless the human explicitly asked to override the split
 
 ---
 

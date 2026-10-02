@@ -27,6 +27,8 @@ Example — `draft-brief`:
 - **Durable history / architecture** live in the Bindify tracking repo at `.bindify/` or `bindify/`.
 - Do **not** write active plan artifacts into the Bindify submodule during apply. Migrate via `publish-bindify-pr` / `log-pr` when packaging.
 - `publish-plan` only ensures the **product** `plan/` branch + draft PR — it never snapshots into tracking and never creates a `feature/` branch from the plan name.
+- After `publish-plan`, the **planner waits** for the draft PR to become ready for review; a **separate executor** runs `iterate-planning-mode`.
+- Executor stays on the draft PR's `plan/` head: no new branches; all step commits push there; finish path runs `gh pr ready` on that draft.
 - When `iterate-planning-mode` finishes the last step, it marks that draft PR ready for review.
 - Plan-step commits are one-per-step and authored as `blanche <blanche@bindify.app>` via `--author` (never change git config).
 

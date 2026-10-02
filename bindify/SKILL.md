@@ -229,8 +229,8 @@ Each PR is a unit of change. The vision flow:
 
 1. Human + agent plan a feature at a high level → write into `wip-docs/` (`coordinator.md` + `brief.md` + `proposal.md`).
 2. After approval, `save-agent-plan` writes `wip-docs/plan.md`; `publish-plan` ensures product branch `plan/<plan-name>` (reusing it if it already exists; forking from the current parent like `release/*` or `feature/*` only when needed) has committed `wip-docs/`, is pushed, and opens a **draft** PR — no Bindify submodule writes, no `feature/` branch inventing.
-3. Agent implements steps via `iterate-planning-mode` against `wip-docs/plan.md`; each step appends to `wip-docs/updates.md`.
-4. When every step has an updates entry, `iterate-planning-mode` finish path runs `generate-verify` and marks the draft PR **ready for review**.
+3. The **planner** agent that ran `publish-plan` **stops and waits** for the draft to become ready for review. A **separate executor** agent (draft-created trigger) runs `iterate-planning-mode` against `wip-docs/plan.md`; each step appends to `wip-docs/updates.md`.
+4. When every step has an updates entry, the executor finish path runs `generate-verify` and marks the draft PR **ready for review** — that is the signal the planner may resume post-apply help.
 5. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, and deletes `wip-docs/`.
 6. `generate-history-summary` creates or refreshes a root history entry and updates `history/index.md`.
 7. `log-pr` records alignment against `standard`/`pattern` objects and runs `scan-architecture fill`.
@@ -269,11 +269,12 @@ For the orchestrator vs executor model, see `references/docs/workflow.md`.
 Two git surfaces, different jobs:
 
 **Product repo**
-- `publish-plan` ensures product branch `plan/<plan-name>` has committed `wip-docs/`, is pushed, and opens a **draft** PR into the parent (`main`, `release/*`, `feature/*`, …) so draft-created triggers can start executors.
+- `publish-plan` ensures product branch `plan/<plan-name>` has committed `wip-docs/`, is pushed, and opens a **draft** PR into the parent (`main`, `release/*`, `feature/*`, …) so draft-created triggers can start **executor** agents.
+- The **planner** that ran `publish-plan` does not implement; it waits until the draft is marked ready for review.
 - Parent/`BASE` is the current branch when it is `main`, `release/*`, `feature/*`, etc. Implementation always stays on `plan/...`.
 - If `plan/<plan-name>` already exists, reuse it — never create `feature/...` from this command, and never fork a new branch while already on the matching `plan/` branch.
-- Executors commit **one commit per plan step** on that `plan/` branch via `iterate-planning-mode`, authored as `blanche <blanche@bindify.app>` (per-commit `--author`, never global git config).
-- When the last plan step is done, `iterate-planning-mode` runs `generate-verify` (separate commit), then marks the draft PR **ready for review**.
+- Executors commit **one commit per plan step** on that **same** `plan/` draft-PR head via `iterate-planning-mode`, authored as `blanche <blanche@bindify.app>` (per-commit `--author`, never global git config). Never create a new branch during iterate.
+- When the last plan step is done, `iterate-planning-mode` runs `generate-verify` (separate commit), pushes the same branch, then marks **that** draft PR **ready for review** (`gh pr ready`).
 - Human sign-off on `wip-docs/verify.md` / the ready PR gates merge.
 
 **Bindify tracking repo** (`.bindify/` or `bindify/`, often a submodule)
