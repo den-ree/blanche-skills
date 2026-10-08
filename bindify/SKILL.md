@@ -1,6 +1,6 @@
 ---
 name: bindify
-description: Bindify is a filesystem-based protocol for coordinating AI agents on software work. Use this skill when the user references `wip-docs/`, `.bindify/`, bindify commands, plan/proposal/update/verify artifacts, coordinator workflows, multi-agent execution with shared markdown state, iterate-planning-mode, prototype-mode, or verify-worktree. Also use when drafting a brief, when the user may be asking for work they do not need, or when bindify chat, planning, and implementation should follow caveman and ponytail.
+description: Bindify is a filesystem-based protocol for coordinating AI agents on software work. Use this skill when the user references `wip-docs/`, `.bindify/`, bindify commands, plan/proposal/update/verify artifacts, coordinator workflows, multi-agent execution with shared markdown state, iterate-planning-mode, prototype-mode, or verify-worktree. Also use when drafting a brief, when the user may be asking for work they do not need, when investigating a feature or fix, when looking up prior fixes before researching code, or when bindify chat, planning, and implementation should follow caveman and ponytail.
 ---
 
 # Bindify
@@ -43,6 +43,7 @@ These commands drive bindify. Each one is a self-contained markdown file in `ref
 | "generate the final summary" / "refresh history after PR" / "prepare the UI summary" | `generate-history-summary` | `references/commands/generate-history-summary.md` |
 | "open a bindify PR" / publish logs to the `.bindify` submodule | `publish-bindify-pr` | `references/commands/publish-bindify-pr.md` |
 | All steps done, ready for human review | `generate-verify` | `references/commands/generate-verify.md` |
+| "investigate this" / "what did we already fix" / research a feature or fix before a brief | `investigate` | `references/commands/investigate.md` |
 | "research the codebase" before proposing | `research-codebase` | `references/commands/research-codebase.md` |
 | "repair links/backlinks after edits" | `update-links` | `references/commands/update-links.md` |
 | "log an unplanned bugfix" | `log-hotfix` | `references/commands/log-hotfix.md` |
@@ -77,6 +78,7 @@ flowchart TD
     mergeMain["merge to main"]
 
     coordinate["coordinate-updates"]
+    investigate["investigate"]
     logHotfix["log-hotfix"]
     updateLinks["update-links"]
 
@@ -109,6 +111,8 @@ flowchart TD
     mergeMain --> genHistory
 
     dialogue -.-> coordinate
+    dialogue -.-> investigate
+    investigate -.->|"brief seed"| draftBrief
     iterate -.-> logHotfix
     briefMd -.-> updateLinks
     proposalMd -.-> updateLinks
@@ -120,6 +124,8 @@ flowchart TD
 ```
 
 Alongside this pipeline, `wip-docs/coordinator.md` runs in parallel as a conversation journal. Unplanned fixes may still land under the Bindify repo's `development/fixes/`. After migration, `.bindify/history/` (or `bindify/history/`) provides a root-level digest layer for humans and UI surfaces.
+
+`investigate` stays off this pipeline. It lists tracking feature-folder names, reads related fixes, and only then looks at product code. Its **Brief seed** is `DISCUSSION_SOURCES` for `draft-brief`. It does not write the brief.
 
 ## Active work: `wip-docs/`
 
@@ -260,6 +266,7 @@ Each PR is a unit of change. The vision flow:
 - **Prototype-first:** For user-facing features, `Step-001` must be a mock UI / Workflow prototype to validate flow before real data/backend integration.
 - **Repo-relative paths only.** Never absolute paths.
 - **No code in context files.** File paths and symbol names only.
+- **Investigate before the codebase.** For a feature or fix question, `investigate` scans tracking feature-folder names and reads related fixes before any product-code research. It does not write the brief.
 - **Clarify before capture.** Before `brief.md`, and before writing any user decision the user has not stated, ask about intention, necessity, and missing inputs, then wait. See `references/docs/working-style.md`.
 - **Chat is caveman.** User-facing replies follow [caveman](https://github.com/JuliusBrussee/caveman) full. Artifacts, commits, and PR text stay normal prose. Questions, security warnings, and irreversible confirmations stay unambiguous.
 - **Plan and build with ponytail.** Proposals, plans, and implementation follow the [ponytail](https://github.com/DietrichGebert/ponytail) ladder. Planning asks before dropping a user request. An approved step is the scope; climb the ladder inside it.
@@ -330,6 +337,6 @@ Host projects adapt Bindify via tracking `project/` (under `.bindify/` or `bindi
 - `references/docs/working-style.md` — clarify gate, caveman chat, ponytail planning and implementation
 - `references/docs/workflow.md` — visual deep-dive (repo branches, link graph, orchestrator model)
 - `references/commands/<name>.md` — load on demand when invoking a command
-- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, history, hotfix, architecture, or project file
+- `references/templates/<name>.md` — load when creating a new brief, proposal, coordinator, verify, history, hotfix, investigation, architecture, or project file
 
 When invoking a command, **read the full command file first**. The summaries in this skill are signposts, not substitutes.

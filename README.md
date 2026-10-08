@@ -105,7 +105,7 @@ human + agent dialogue
 
 `wip-docs/coordinator.md` runs in parallel as a conversation journal for intent, decisions, and pivots.
 
-### Six commands
+### Commands
 
 | Command | Purpose |
 |---|---|
@@ -114,6 +114,7 @@ human + agent dialogue
 | `iterate-planning-mode` | Execute one step from `plan.md` |
 | `summarize-work-for-updates` | Append step results to `updates.md` |
 | `generate-verify` | Build a human verification checklist |
+| `investigate` | Look up prior fixes in `.bindify/` before code research; seed a later brief |
 | `research-codebase` | Research before proposing |
 
 ### Two placements (+ WIP)
@@ -135,12 +136,14 @@ bindify/
     │   ├── iterate-planning-mode.md
     │   ├── summarize-work-for-updates.md
     │   ├── generate-verify.md
-    │   └── research-codebase.md
+    │   ├── research-codebase.md
+    │   └── investigate.md
     └── templates/
         ├── brief.md
         ├── proposal.md
         ├── coordinator.md
-        └── verify.md
+        ├── verify.md
+        └── investigation.md
 ```
 
 ## License

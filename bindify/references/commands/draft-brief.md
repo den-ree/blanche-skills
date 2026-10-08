@@ -55,6 +55,8 @@ Read `references/docs/working-style.md` first. User-facing chat is caveman. Ques
 
 3. Gather source context
    - Read all `DISCUSSION_SOURCES`
+   - An `investigate` note counts as a source. Use its **Brief seed** and **Related fixes**. Do not paste the note in as the brief
+   - The clarify gate still runs. A brief seed is not a user answer
    - Capture only decisions the user actually made, including the necessity pick
    - Keep unresolved questions in `Open questions`
 

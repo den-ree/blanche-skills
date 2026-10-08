@@ -58,7 +58,8 @@ When executing in Linux cloud environments on macOS/iOS codebases:
 ## Read order for agents
 
 1. This skill's `SKILL.md` and the relevant `references/commands/<name>.md`
-2. `wip-docs/` — if present, this is the active feature context
-3. Tracking `project/profile.md` and `project/environment.md` (under `.bindify/` or `bindify/`) if present
-4. Tracking `architecture/_map.md` — when reasoning about impact or alignment
-5. Skill `references/docs/workflow.md` — when branch strategy or doc linking is unclear
+2. For a feature or fix question before a brief: `investigate` — list tracking feature-folder names and read related fixes before product code
+3. `wip-docs/` — if present, this is the active feature context
+4. Tracking `project/profile.md` and `project/environment.md` (under `.bindify/` or `bindify/`) if present
+5. Tracking `architecture/_map.md` — when reasoning about impact or alignment
+6. Skill `references/docs/workflow.md` — when branch strategy or doc linking is unclear
