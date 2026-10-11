@@ -5,7 +5,7 @@ description: Bindify is a filesystem-based protocol for coordinating AI agents o
 
 # Bindify
 
-Bindify is a filesystem-based communication protocol for AI agents working on software. **Active feature work lives in a flat `wip-docs/` folder at the project root** so agents can reliably read and write planning artifacts. The Bindify tracking repo (`.bindify/` or `bindify/` — often a submodule) holds durable history, architecture, and completed plans after migration.
+Bindify is a filesystem-based communication protocol for AI agents working on software. **Active feature work lives in a flat `wip-docs/` folder at the project root** so agents can reliably read and write planning artifacts. The Bindify tracking repo (`.bindify/` or `bindify/` — often a submodule) holds architecture, completed plans, and an Obsidian-friendly `history/` brain — cards may appear when a draft plan PR opens; plans migrate into `development/` at packaging.
 
 Read this whole file when bindify is in play; load command/template files from this skill's `references/` on demand.
 
@@ -15,7 +15,7 @@ Read this whole file when bindify is in play; load command/template files from t
 |---|---|---|---|
 | **Skill** | Installed skill (e.g. `~/.agents/skills/bindify/`) | `SKILL.md`, `references/commands/`, `references/templates/` | **How to run bindify.** Always read commands and templates from here. Never look inside the project tracking folder for command specs or templates. |
 | **Active WIP** | `<project-root>/wip-docs/` | `brief.md`, `proposal.md`, `plan.md`, `updates.md`, `verify.md`, `coordinator.md` | **Write active feature docs here.** Flat; one feature at a time. |
-| **Tracking repo** | `<project-root>/.bindify/` **or** `<project-root>/bindify/` (folder or submodule) | `development/`, `architecture/`, `history/`, `project/` | **Durable project memory only.** Read `project/` and `architecture/` for context. Write migrated plans/history here at packaging time — not during draft/apply. |
+| **Tracking repo** | `<project-root>/.bindify/` **or** `<project-root>/bindify/` (folder or submodule) | `development/`, `architecture/`, `history/`, `project/` | **Durable project memory.** Read `project/` and `architecture/` for context. Write migrated plans into `development/` at packaging time. Exception: `history/` may be written as soon as a draft plan PR exists so the vault shows live work. |
 
 Example: `draft-brief` → read template from **skill** `references/templates/brief.md` → optionally read **tracking** `project/profile.md` / `architecture/_map.md` for context → write **`wip-docs/brief.md`**. Do **not** open `.bindify/commands/` or `.bindify/templates/` expecting skill implementation.
 
@@ -40,7 +40,7 @@ These commands drive bindify. Each one is a self-contained markdown file in `ref
 | Right after a step finishes, before moving on | `summarize-work-for-updates` | `references/commands/summarize-work-for-updates.md` |
 | "scan the architecture" / "build the architecture map" / missing arch object | `scan-architecture` | `references/commands/scan-architecture.md` |
 | "log this PR" / ingest a PR into the tracking history | `log-pr` | `references/commands/log-pr.md` |
-| "generate the final summary" / "refresh history after PR" / "prepare the UI summary" | `generate-history-summary` | `references/commands/generate-history-summary.md` |
+| "generate the final summary" / "refresh history after PR" / "prepare the UI summary" / draft-PR in-progress card | `generate-history-summary` | `references/commands/generate-history-summary.md` |
 | "open a bindify PR" / publish logs to the `.bindify` submodule | `publish-bindify-pr` | `references/commands/publish-bindify-pr.md` |
 | All steps done, ready for human review | `generate-verify` | `references/commands/generate-verify.md` |
 | "investigate this" / "what did we already fix" / research a feature or fix before a brief | `investigate` | `references/commands/investigate.md` |
@@ -62,6 +62,7 @@ flowchart TD
     planMd["wip-docs/plan.md"]
     publishPlan["publish-plan"]
     planBranch["product plan/plan-name + draft PR"]
+    historyInProgress["history card in-progress"]
     iterate["iterate-planning-mode"]
     summarize["summarize-work-for-updates"]
     updatesMd["wip-docs/updates.md"]
@@ -91,6 +92,9 @@ flowchart TD
     savePlan --> planMd
     planMd --> publishPlan
     publishPlan --> planBranch
+    planBranch --> historyInProgress
+    historyInProgress --> historyEntry
+    historyInProgress --> historyIndex
     planBranch --> iterate
     iterate --> summarize
     summarize --> updatesMd
@@ -102,6 +106,7 @@ flowchart TD
     prReady -->|"head plan-fixes/"| humanSignoff
     reviewPlan -->|"clean"| humanSignoff
     reviewPlan -->|"in-scope misses"| fixesDraft
+    fixesDraft --> historyInProgress
     fixesDraft --> iterate
     humanSignoff --> migrate
     migrate --> genHistory
@@ -123,7 +128,7 @@ flowchart TD
     historyEntry -.-> updateLinks
 ```
 
-Alongside this pipeline, `wip-docs/coordinator.md` runs in parallel as a conversation journal. Unplanned fixes may still land under the Bindify repo's `development/fixes/`. After migration, `.bindify/history/` (or `bindify/history/`) provides a root-level digest layer for humans and UI surfaces.
+Alongside this pipeline, `wip-docs/coordinator.md` runs in parallel as a conversation journal. Unplanned fixes may still land under the Bindify repo's `development/fixes/`. Tracking `history/` is the Obsidian brain layer: short property-backed cards plus a status-grouped index. Cards appear as `in-progress` when the draft plan PR opens, then refresh through `pr-open` and `merged`.
 
 `investigate` stays off this pipeline. It lists tracking feature-folder names, reads related fixes, and only then looks at product code. Its **Brief seed** is `DISCUSSION_SOURCES` for `draft-brief`. It does not write the brief.
 
@@ -210,7 +215,7 @@ Canonical command specs and templates always come from the **skill** (`reference
 | verify | `wip-docs/verify.md` | human checklist |
 | review | open `plan/` PR | AI via `review-plan` (append-only fix steps on `plan-fixes/`) |
 | migrate | copy into Bindify `development/...` + remove `wip-docs/` | AI via `publish-bindify-pr` / `log-pr` |
-| summarize-for-history | `.bindify/history/index.md` + `.bindify/history/entries/<date>-<slug>.md` | AI via `generate-history-summary` |
+| summarize-for-history | `.bindify/history/index.md` + `.bindify/history/entries/<date>-<slug>.md` (property-backed cards; may start at draft PR) | AI via `generate-history-summary` / `publish-plan` handoff |
 
 ## Architecture object graph
 
@@ -231,35 +236,35 @@ ripple effects — what else the change can affect) and an **Architecture** sect
 objects it `created` / `modified` / `touches`). This is what turns the log into a connected graph instead of a
 flat history.
 
-`updates.md` is still the execution ledger, not the best user-facing overview. Bindify now treats root history
-summaries as a separate layer: concise synthesized narratives that read the step logs, link back to them, and
-explain the combined effect on features, architecture, and adjacent docs/research.
+`updates.md` is still the execution ledger, not the best user-facing overview. Root history cards are a
+separate layer: YAML properties for tags and links, a short readable body with aliased `[[wiki-links]]`, and
+`history/index.md` rebuilt into In progress / In review / Done for agents and UI surfaces.
 
 ## PR-driven logging flow
 
 Each PR is a unit of change. The vision flow:
 
 1. Human + agent plan a feature at a high level → write into `wip-docs/` (`coordinator.md` + `brief.md` + `proposal.md`).
-2. After approval, `save-agent-plan` writes `wip-docs/plan.md`; `publish-plan` ensures product branch `plan/<plan-name>` (reusing it if it already exists; forking from the current parent like `release/*` or `feature/*` only when needed) has committed `wip-docs/`, is pushed, and opens a **draft** PR — no Bindify submodule writes, no `feature/` branch inventing.
+2. After approval, `save-agent-plan` writes `wip-docs/plan.md`; `publish-plan` ensures product branch `plan/<plan-name>` (reusing it if it already exists; forking from the current parent like `release/*` or `feature/*` only when needed) has committed `wip-docs/`, is pushed, and opens a **draft** PR — no `feature/` branch inventing. After the draft URL exists, it upserts an `in-progress` history card under tracking `history/` (not `development/`) and pushes that history commit without bumping the product submodule pointer.
 3. The **planner** agent that ran `publish-plan` **stops and waits** for the draft to become ready for review. A **separate executor** agent (draft-created trigger) runs `iterate-planning-mode` against `wip-docs/plan.md`; each step appends to `wip-docs/updates.md`.
 4. When every step has an updates entry, the executor finish path runs `generate-verify` and marks the draft PR **ready for review** (`gh pr ready`). The executor stops. It does not keep committing on `plan/<leaf>`.
-5. A **reviewer** agent runs `review-plan` on that ready PR when the head is `plan/*`. It compares the diff to the brief, the plan, and `updates.md`. Improvements are a PR comment only. In-scope misses (unmet done criteria, unmet brief success criteria, missing or wrong planned behavior) are appended as new steps — existing steps stay unchanged — on branch `plan-fixes/<leaf>` (same leaf as `plan/<leaf>`). That branch gets one **draft** PR whose base is the plan branch, not `main` or `release/*`. This round happens once.
+5. A **reviewer** agent runs `review-plan` on that ready PR when the head is `plan/*`. It compares the diff to the brief, the plan, and `updates.md`. Improvements are a PR comment only. In-scope misses (unmet done criteria, unmet brief success criteria, missing or wrong planned behavior) are appended as new steps — existing steps stay unchanged — on branch `plan-fixes/<leaf>` (same leaf as `plan/<leaf>`). That branch gets one **draft** PR whose base is the plan branch, not `main` or `release/*`. This round happens once. The same history card stays `in-progress` with `pr` updated to the fixes draft.
 6. Draft-created on `plan-fixes/*` starts the executor again, only for the new steps. The finish path marks **that** draft ready. `ready_for_review` on `plan-fixes/*` does not start another reviewer. A human merges the fixes PR into the plan branch, or reviews the plan PR directly when `review-plan` found nothing to schedule.
-7. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, and deletes `wip-docs/`.
-8. `generate-history-summary` creates or refreshes a root history entry and updates `history/index.md`.
+7. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, rewrites the history card's `plan` / `updates` links off `wip-docs/`, and deletes `wip-docs/`.
+8. `generate-history-summary` refreshes the same root history card in `pr-open` mode and rebuilds `history/index.md` under **In review**.
 9. `log-pr` records alignment against `standard`/`pattern` objects and runs `scan-architecture fill`.
-10. After merge, `generate-history-summary` runs again in `merged` mode so the root history reflects final outcome and status.
-11. `publish-bindify-pr` opens a PR to the Bindify submodule with the migrated logs + architecture updates.
+10. After merge, `generate-history-summary` runs again in `merged` mode so the card moves to **Done**.
+11. `publish-bindify-pr` opens a PR to the Bindify submodule with the migrated logs + architecture updates (history may already be on tracking `main` from earlier status writes).
 
 ## Hard rules
 
-- **Active docs live in `wip-docs/` until migration.** Do not write active brief/proposal/plan/updates/verify/coordinator into the Bindify submodule during apply.
+- **Active docs live in `wip-docs/` until migration.** Do not write active brief/proposal/plan/updates/verify/coordinator into tracking `development/` during apply.
 - **Implementation branches are `plan/<leaf>` and, after review, one `plan-fixes/<leaf>`.** `publish-plan` creates the plan branch. Only `review-plan` may create `plan-fixes/<leaf>`, and its draft PR targets the plan branch. Never create `feature/...`. Executors never create a branch; they stay on the draft head that triggered them. `FEATURE_NAME` in docs is metadata, not a branch name.
 - **Never modify existing plan steps during apply.** Execution state goes into `updates.md` only. After the plan PR is open, `review-plan` may append new steps on `plan-fixes/` only.
 - **Every update entry needs Impact & Connections + Architecture sections.** No flat changelogs.
 - **Architecture `Responsibility` is human-owned.** `scan-architecture fill` appends change-log lines and edges only — it never rewrites a responsibility.
 - **`updates.md` is append-only.** Initialize with a feature overview on first creation; never rewrite past entries.
-- **Root history is the digest layer.** `history/index.md` and `history/entries/*.md` may be refreshed to keep the best current synthesis.
+- **Root history is the Obsidian brain layer.** One card per outcome under `history/entries/`; properties hold tags and link roles; the body stays short with aliased wikilinks. `history/index.md` rebuilds into In progress / In review / Done. Cards may be written from draft PR time onward; refresh the same slug through `in-progress` → `pr-open` → `merged`.
 - **`hotfixes.md` is append-only.** Log unplanned fixes; do not rewrite history.
 - **Never introduce scope beyond the current step.** Note observations, don't act on them.
 - **Word limits for planning:** `brief.md` must be ≤ 150 words. `proposal.md` must be ≤ 250 words.
@@ -296,9 +301,10 @@ Two git surfaces, different jobs:
 - Human sign-off on `wip-docs/verify.md` / the ready plan PR gates merge. When a fixes draft exists, merge it into the plan branch before that sign-off.
 
 **Bindify tracking repo** (`.bindify/` or `bindify/`, often a submodule)
-- Untouched during apply.
-- `publish-bindify-pr` / `log-pr` migrate completed WIP into `development/...`, write history/architecture, open a Bindify `log/pr-*` PR, and bump the submodule pointer.
-- Tracking `main` is stable durable history after those log PRs merge.
+- `development/` stays untouched during apply.
+- Exception: `history/` may be written and pushed to tracking `main` as soon as the draft plan PR exists (`publish-plan` / `review-plan` / `generate-history-summary`), without bumping the product submodule pointer.
+- `publish-bindify-pr` / `log-pr` migrate completed WIP into `development/...`, refresh history/architecture, open a Bindify `log/pr-*` PR, and bump the submodule pointer.
+- Tracking `main` holds live history cards plus durable migrated plans after those log PRs merge.
 
 See `references/docs/workflow.md` for the repo and branch diagram.
 
@@ -307,7 +313,7 @@ See `references/docs/workflow.md` for the repo and branch diagram.
 Bindify markdown files should be navigable as an Obsidian graph.
 
 - Use inline `[[wiki-links]]` when referencing related docs.
-- Maintain a `## Related` section at the bottom of each file.
+- Maintain a `## Related` section at the bottom of each file — except history cards, which use YAML link properties plus aliased body links instead of a `## Related` dump.
 - Run `update-links` after commands that write markdown files.
 
 See `references/docs/workflow.md` for the markdown link graph diagram.
