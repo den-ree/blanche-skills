@@ -56,20 +56,27 @@ State in the log which sources were used.
    `publish-bindify-pr` section A (copy plan artifacts into Bindify `development/<category>/<feature>/plans/<plan>/`,
    merge coordinator, rewrite metadata, `update-links`). Prefer leaving cleanup of `wip-docs/` to
    `publish-bindify-pr` unless the human asked to finish packaging in this command.
-3. **Read the architecture skeleton.** Load `architecture/_map.md` from `.bindify/` or `bindify/` and the objects
+3. **Rewrite history card plan/updates links after migration.**
+   - Find the existing history entry for this feature/plan slug under tracking `history/entries/`.
+   - Update properties `plan` and `updates` from any `wip-docs/` targets to the durable migrated notes under
+     `development/<category>/<feature>/plans/<plan>/`.
+   - Keep body aliases synchronized with those property targets (`update-links` history-card rules).
+   - Do not create a second history card for the migration itself.
+4. **Read the architecture skeleton.** Load `architecture/_map.md` from `.bindify/` or `bindify/` and the objects
    the diff plausibly touches.
-4. **Summarize the change** in the impact-aware `updates.md` format from `summarize-work-for-updates`:
+5. **Summarize the change** in the impact-aware `updates.md` format from `summarize-work-for-updates`:
    - Prefer appending the PR alignment entry to the **migrated** plan `updates.md` (or to `wip-docs/updates.md`
      if migration is deferred to `publish-bindify-pr`).
    - If the PR is a standalone fix with no plan, route to `development/fixes/<feature>/hotfixes.md` instead.
    - Include Summary, File Changes, Key Components, **Impact & Connections**, **Architecture**.
-5. **Write the Alignment assessment** (see format below).
-6. **Update the architecture graph.** Invoke `scan-architecture` in `fill` mode with this PR's changes as
+6. **Write the Alignment assessment** (see format below).
+7. **Update the architecture graph.** Invoke `scan-architecture` in `fill` mode with this PR's changes as
    `SOURCE_REFS`.
-7. **Refresh links.** Run `update-links` for the affected folder (`wip-docs/` and/or migrated plan folder).
-8. **Check root history state.** If a PR exists and no root history summary has been created yet, suggest or run
-   `generate-history-summary` in `pr-open` mode so the outcome appears in Bindify `history/`.
-9. **Hand off.** Report the log path and the affected architecture objects; suggest `publish-bindify-pr` to open
+8. **Refresh links.** Run `update-links` for the affected folder (`wip-docs/` and/or migrated plan folder) and for
+   tracking `history/` when a card was rewritten.
+9. **Refresh root history status.** Run or refresh `generate-history-summary` in `pr-open` mode (same slug) so the
+   card synthesizes the outcome, fills architecture link roles, and the index lists it under **In review**.
+10. **Hand off.** Report the log path and the affected architecture objects; suggest `publish-bindify-pr` to open
    the PR against the Bindify submodule (and finish WIP cleanup if still pending).
 
 ---
@@ -98,6 +105,7 @@ Base the rating on evidence from the diff and the standard/pattern objects, not 
 - **Ground alignment in objects**, not opinion — cite the `standard`/`pattern` object you measured against.
 - **Repo-relative paths only.** No absolute paths in markdown.
 - Prefer `wip-docs/` as the active evidence source until migration completes.
+- After migration, history-card `plan` / `updates` must not still point at `wip-docs/`.
 - If feature/plan placement is ambiguous, stop and ask before writing.
 
 ---
@@ -108,7 +116,10 @@ Base the rating on evidence from the diff and the standard/pattern objects, not 
   and Alignment sections.
 - When `wip-docs/` was present, Category/Feature/Plan were resolved from its headers and migration was performed
   or explicitly deferred to `publish-bindify-pr`.
+- When migration ran, the matching history card's `plan` / `updates` properties (and body aliases) point at the
+  durable `development/...` notes, not `wip-docs/`.
 - `scan-architecture fill` has run; objects the PR touched exist and carry a change-log line citing the PR.
+- The root history card is refreshed in `pr-open` mode (or an equivalent refresh is reported).
 - The log states which ingestion sources were used.
 
 ---

@@ -8,8 +8,8 @@ This command migrates WIP artifacts, commits them on a branch in that repo, open
 pointer in the product repo, and removes `wip-docs/` from the host root.
 
 Distinct from `publish-plan`:
-- `publish-plan` only kickstarts the **product** branch with committed `wip-docs/` (no Bindify writes).
-- `publish-bindify-pr` is the **only** WIP → Bindify migration/publish step, run after the product PR exists.
+- `publish-plan` kickstarts the **product** branch with committed `wip-docs/` and may write tracking `history/` for an `in-progress` card. It never writes tracking `development/`.
+- `publish-bindify-pr` is the WIP → Bindify `development/` migration/publish step, run after the product PR exists.
 
 ---
 
@@ -53,8 +53,9 @@ Resolve `BINDIFY_SUBMODULE_PATH` in order:
    - If Bindify already has `development/<category>/<feature-name>/coordinator.md`, prepend new session entries from `wip-docs/coordinator.md` (newest first); never delete older durable entries.
    - If missing, copy `wip-docs/coordinator.md` to that path and rewrite Related links for the nested layout.
 5. **Rewrite path metadata** in migrated files so `Plan path` / migration destination reflect the Bindify layout (not `wip-docs/`).
-6. **Run `update-links`** on the destination plan folder (and feature folder for coordinator).
-7. **Clean up host WIP** unless `KEEP_WIP=true`:
+6. **Rewrite history card links.** If a matching `history/entries/*` card still points `plan` / `updates` at `wip-docs/`, point them at the migrated `development/...` notes and sync body aliases via `update-links` on tracking `history/`.
+7. **Run `update-links`** on the destination plan folder (and feature folder for coordinator).
+8. **Clean up host WIP** unless `KEEP_WIP=true`:
    - Delete `wip-docs/` from the host project root (all contents).
    - Stage the deletion in the **product** repo if `wip-docs/` was tracked.
 

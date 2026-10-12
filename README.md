@@ -1,6 +1,6 @@
 # Bindify Agent Skill
 
-Filesystem-based coordination for AI agents working on software — brief, propose, plan, apply, and verify through structured markdown. **Active feature work lives in `wip-docs/` at the project root**; durable history migrates into a Bindify tracking repo (`.bindify/` or `bindify/`, often a submodule).
+Filesystem-based coordination for AI agents working on software — brief, propose, plan, apply, and verify through structured markdown. **Active feature work lives in `wip-docs/` at the project root**; durable plans migrate into a Bindify tracking repo (`.bindify/` or `bindify/`, often a submodule). Tracking `history/` is an Obsidian-friendly brain of short property-backed cards that can appear as soon as a draft plan PR opens.
 
 Compatible with any AI coding tool that supports the [Agent Skills open format](https://agentskills.io/home).
 
@@ -120,7 +120,7 @@ human + agent dialogue
 ### Two placements (+ WIP)
 
 - **Global skill** — install for shared commands and templates across projects.
-- **Project tracking** — `.bindify/` or `bindify/` inside each product repo (often a submodule) for durable history, architecture, and completed plans.
+- **Project tracking** — `.bindify/` or `bindify/` inside each product repo (often a submodule) for history cards, architecture, and completed plans.
 - **Active WIP** — `wip-docs/` at the host project root while a feature is in progress.
 
 ## Skill Structure

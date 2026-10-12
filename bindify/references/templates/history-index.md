@@ -1,20 +1,19 @@
 # History Index
 
-Use this file as the compact root discovery surface for humans and UI layers.
-Do not duplicate full history entries here. Keep each item brief and link outward.
+Agent discovery surface for history cards. The promoted human surface is a status-ordered list; this file records the same items for agents.
+
+Rebuild from entry properties whenever a card is written. Group by `status`. Each item is one line: aliased title plus topic tags (and PR / agent chips when present). No path rows. No status words in the line body — the section heading is the status.
 
 ---
 
-## YYYY-MM-DD — [Short Outcome Title]
+## In progress
 
-- Status: `pr-open` | `merged`
-- Summary: _1-2 short bullets explaining the outcome_
-- Entry: `[[entries/<date>-<slug>.md]]`
-- Plans: `development/<category>/<feature>/plans/<plan-name>/plan.md`
-- Features/Docs: `development/features/<feature>/...`, `docs/<path>.md`
+- [[entries/<date>-<slug>|Short Outcome Title]] — `<topic>` · `#<pr>` · `<agent>`
 
----
+## In review
 
-## Related
+- [[entries/<date>-<slug>|Short Outcome Title]] — `<topic>` · `#<pr>`
 
-- `[[entries/<date>-<slug>.md]]`
+## Done
+
+- [[entries/<date>-<slug>|Short Outcome Title]] — `<topic>`

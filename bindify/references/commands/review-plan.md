@@ -160,7 +160,14 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
      ```
    - Also comment on the **plan** PR: link the fixes draft, list the scheduled steps, and list `Noted, not scheduled`.
 
-8. Stop
+8. Refresh the same in-progress history card
+   - Reuse the existing history entry for this plan/outcome slug. Do **not** create a second card.
+   - Run `generate-history-summary` in `MODE=in-progress` with `PR_REF` set to the **fixes** draft PR URL, keeping `status: in-progress`.
+   - Rebuild `history/index.md` so the item stays under **In progress** with the updated PR chip.
+   - Tracking writes are limited to `history/` (same exception as `publish-plan`). Do not touch `development/` and do not bump the product submodule pointer.
+   - If tracking is missing, report that the history refresh was skipped.
+
+9. Stop
    - Do not run `iterate-planning-mode`
    - Do not mark the fixes draft ready
    - Do not commit anything else on `plan/<leaf>`
@@ -192,7 +199,8 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
 - Never implement the fix in this command
 - Never start a second automatic round
 - Never schedule improvements as steps
-- Do not write `hotfixes.md` or anything under `.bindify/` / `bindify/`
+- Do not write `hotfixes.md` or anything under tracking `development/`
+- Tracking exception: may refresh the same history card under tracking `history/` after the fixes draft URL exists
 - After the plan PR is open, leave `plan/<leaf>` frozen so the fixes append merges cleanly
 - Use repo-relative paths only. No source code in `plan.md`
 
@@ -207,6 +215,7 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
   - `plan-fixes/<leaf>` exists, contains only appended steps, and has one draft PR whose base is `plan/<leaf>`
 - Existing `Step-###` sections are unchanged
 - No second `plan-fixes/` PR was opened when one already existed for that leaf
+- When a fixes draft was opened and tracking is present, the existing history card stayed one file, `status: in-progress`, with `pr` updated to the fixes draft URL
 
 ---
 
@@ -214,5 +223,6 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
 
 - `[[references/commands/iterate-planning-mode.md]]`
 - `[[references/commands/publish-plan.md]]`
+- `[[references/commands/generate-history-summary.md]]`
 - `[[references/commands/generate-verify.md]]`
 - `[[references/commands/log-hotfix.md]]`

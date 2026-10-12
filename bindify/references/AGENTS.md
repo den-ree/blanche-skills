@@ -12,7 +12,7 @@ Use this file as a quick entry point, not as the full specification.
 |---|---|---|
 | Skill | Installed bindify skill | Commands + templates (how to run bindify) |
 | Active WIP | `wip-docs/` at host project root | Write brief/proposal/plan/updates/verify/coordinator |
-| Tracking | `.bindify/` or `bindify/` in the product repo (folder or submodule) | Read `project/`, `architecture/`; migrate durable `development/` + `history/` at packaging |
+| Tracking | `.bindify/` or `bindify/` in the product repo (folder or submodule) | Read `project/`, `architecture/`; migrate durable `development/` at packaging; `history/` may start at draft PR |
 
 **Never** open the tracking folder looking for skill command specs or brief/proposal templates. Those are only in the skill.
 
@@ -25,8 +25,8 @@ Example — `draft-brief`:
 
 - **Active feature docs** live in `wip-docs/` at the **host project root** (flat), on product branch `plan/<plan-name>` after `publish-plan` (reuse existing `plan/` branch; parent may be `release/*` or `feature/*`; opens a **draft** PR).
 - **Durable history / architecture** live in the Bindify tracking repo at `.bindify/` or `bindify/`.
-- Do **not** write active plan artifacts into the Bindify submodule during apply. Migrate via `publish-bindify-pr` / `log-pr` when packaging.
-- `publish-plan` only ensures the **product** `plan/` branch + draft PR — it never snapshots into tracking and never creates a `feature/` branch from the plan name.
+- Do **not** write active plan artifacts into tracking `development/` during apply. Migrate via `publish-bindify-pr` / `log-pr` when packaging.
+- `publish-plan` ensures the **product** `plan/` branch + draft PR and upserts an `in-progress` history card under tracking `history/` (not `development/`). It never creates a `feature/` branch from the plan name.
 - After `publish-plan`, the **planner waits** for the draft PR to become ready for review; a **separate executor** runs `iterate-planning-mode`.
 - Executor stays on the triggering draft head (`plan/<leaf>` or `plan-fixes/<leaf>`): no new branches; all step commits push there; finish path runs `gh pr ready` on that draft.
 - When `iterate-planning-mode` finishes the last unfinished step, it marks that draft PR ready for review and stops committing on that branch.

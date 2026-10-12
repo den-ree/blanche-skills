@@ -74,7 +74,7 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 3. Stage active WIP on the implementation branch
    - Ensure these exist under `wip-docs/` when present: `brief.md`, `proposal.md`, `plan.md` (and any `plan-v*.md`), `coordinator.md`
    - Do **not** create `updates.md` / `verify.md` here unless they already exist
-   - Do **not** write into `.bindify/` or `bindify/`
+   - Do **not** write into tracking `development/` (history card comes after the draft PR URL exists)
 
 4. Commit and push (product repo)
    - Stage `wip-docs/` (and only related product files the human already asked to include)
@@ -121,14 +121,29 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
    - If `gh` is unavailable, push the branch and report the compare URL for manual draft PR creation; stop and say draft automation will not fire until a draft PR exists.
    - Report the draft PR URL prominently — this is the handoff signal for draft-created agent triggers.
 
-6. Return handoff context — then **STOP**
+6. Upsert the in-progress history card (tracking `history/` only)
+   - After a draft PR URL exists, resolve the Bindify tracking root (`.bindify/` then `bindify/`).
+   - If the tracking checkout is missing, still keep the product draft PR and report that the history card was skipped — do not fail the publish.
+   - When tracking is present, run `generate-history-summary` in `MODE=in-progress` with:
+     - `PATH_TO_BRIEF_MD` = `wip-docs/brief.md`
+     - `PATH_TO_PLAN_MD` = `wip-docs/plan.md`
+     - `PR_REF` = the draft PR URL
+     - `FEATURE_NAME` / `ENTRY_SLUG` from WIP headers
+     - `AGENT` = `blanche` (or the working agent label when known)
+   - That write may only touch tracking `history/entries/` and `history/index.md`. Do **not** touch `development/`, architecture, or other tracking trees.
+   - Body = intended outcome from the brief. `plan` / `updates` properties point at the WIP plan (and updates when it exists). Topic tag from the feature name.
+   - Commit and push the history changes on tracking `main` (or the tracking default branch). Do **not** bump the product submodule pointer for this history-only commit.
+   - Rebuild the overview via the history-summary index step so the card appears under **In progress**.
+
+7. Return handoff context — then **STOP**
    - Report implementation branch (`plan/<plan-name>`), parent/`BASE`, whether branch was created or reused
    - Report **draft PR URL** (or existing PR URL)
+   - Report whether the in-progress history card was written / skipped
    - Report `wip-docs/plan.md` as the path the **executor** agent will use
    - Tell the human: draft is published; a different agent should implement via `iterate-planning-mode`
-   - Remind: Bindify migration is deferred to `publish-bindify-pr` after the product PR is ready/merged
+   - Remind: Bindify `development/` migration is deferred to `publish-bindify-pr` after the product PR is ready/merged; live work may already appear in tracking `history/`
 
-7. Planner wait gate (mandatory for the agent that ran `publish-plan`)
+8. Planner wait gate (mandatory for the agent that ran `publish-plan`)
    - **Do not** run `iterate-planning-mode`, edit product code, or mark the PR ready yourself.
    - Implementation belongs to a **separate executor agent** triggered by the draft PR (or explicitly started by the human).
    - Stay idle on this workstream until the draft becomes a **ready-for-review / open** PR (`isDraft: false`), which the executor does at the end of the last step.
@@ -147,7 +162,8 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 
 ## Guardrails
 
-- Operate only in the **product** git repo — never the Bindify submodule for this command
+- Operate in the **product** git repo for the plan branch / draft PR
+- Tracking exception: after the draft PR URL exists, `history/` under `.bindify/` or `bindify/` may be written and pushed so the vault shows live work — still never touch tracking `development/`
 - Implementation branch must be `plan/...` — never invent `feature/...` from the plan name
 - If `plan/<plan-name>` already exists, reuse it; do not create a sibling or child branch
 - Never create a new branch while already on the matching `plan/` branch
@@ -157,6 +173,7 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 - Do not create the plan branch / draft without a reviewed proposal
 - Do not delete `wip-docs/`
 - Do not snapshot or copy WIP into tracking `development/`
+- Do not bump the product submodule pointer for history-only commits
 - Use repo-relative paths inside markdown content
 - If repository state is unclear, stop and ask
 
@@ -169,8 +186,11 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 - If `plan/<plan-name>` already existed, it was reused (not recreated)
 - `wip-docs/` plan artifacts are committed and pushed on that branch
 - A draft PR exists from `plan/<plan-name>` into `BASE` (unless `DRAFT_PR=false`)
-- No writes into `.bindify/` / `bindify/`
-- Handoff reports branch, draft PR URL, and that the planner is waiting for the draft to become ready for review
+- When tracking is present, an `in-progress` history card exists under tracking `history/` with the draft PR URL, and the index lists it under **In progress**
+- When tracking is missing, the product draft PR still exists and the handoff reports that the history card was skipped
+- No writes into tracking `development/`
+- Product submodule pointer was not bumped for the history-only commit
+- Handoff reports branch, draft PR URL, history-card status, and that the planner is waiting for the draft to become ready for review
 - The publishing agent did **not** start `iterate-planning-mode` unless the human explicitly asked to override the split
 
 ---
@@ -180,5 +200,6 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 - `[[references/commands/save-agent-plan.md]]`
 - `[[references/commands/iterate-planning-mode.md]]`
 - `[[references/commands/review-plan.md]]`
+- `[[references/commands/generate-history-summary.md]]`
 - `[[references/commands/generate-verify.md]]`
 - `[[references/commands/publish-bindify-pr.md]]`

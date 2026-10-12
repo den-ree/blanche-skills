@@ -1,25 +1,29 @@
 # Command: generate-history-summary
 
-Read a completed plan's execution evidence and produce a root-level history summary that is short, clear, and easy for humans or UI surfaces to scan.
+Create or refresh a root-level history card that Obsidian and an agent can share: YAML properties for tags and links, a short readable body, one evolving file per outcome.
 
 This command creates or refreshes (under the Bindify **tracking** root — `.bindify/` or `bindify/`):
-- `history/entries/<date>-<slug>.md` — the full synthesized summary
-- `history/index.md` — a compact index entry pointing at that summary
+- `history/entries/<date>-<slug>.md` — the history card (properties + short body)
+- `history/index.md` — status-grouped discovery list rebuilt from entry properties
 
 While a feature is still active, source evidence may still live in `wip-docs/`; after migration, read the plan under tracking `development/...`. Do not write history into `wip-docs/`.
 
-`generate-history-summary` does not replace `updates.md`. It reads `updates.md` and related context, then turns that evidence into a concise narrative layer.
+`generate-history-summary` does not replace `updates.md`. It reads `updates.md` (or the brief, in `in-progress` mode) and turns that evidence into a concise card.
+
+Use the skill template `references/templates/history-entry.md` for the card shape and `references/templates/history-index.md` for the index shape.
 
 ---
 
 ## When to use
 
-- A product PR has been opened and the step work is already recorded in `updates.md`
-- A merged branch needs its root history summary refreshed to reflect final status
-- The UI needs a primary, visualization-friendly summary instead of the raw step log
+- `publish-plan` has a draft PR URL and needs an `in-progress` card (handoff only; usually invoked from that command)
+- A product PR is ready for review and the step work is recorded in `updates.md`
+- A merged branch needs its root history card refreshed to reflect final status
+- The UI / Obsidian vault needs a clean card instead of the raw step log
 
 Typical timing:
-- `pr-open` mode: after PR creation, once `verify.md` exists and the plan is reviewable
+- `in-progress` mode: right after the draft `plan/*` (or `plan-fixes/*`) PR URL exists
+- `pr-open` mode: after the plan PR is ready for review, once `verify.md` exists
 - `merged` mode: after the branch is merged to `main`
 
 ---
@@ -28,15 +32,16 @@ Typical timing:
 
 | Input | Required | Description |
 |---|---|---|
-| `MODE` | yes | `pr-open` or `merged` |
-| `PATH_TO_PLAN_MD` | yes | Repo-relative path to `plan.md` |
-| `PATH_TO_UPDATES_MD` | yes | Repo-relative path to `updates.md` |
+| `MODE` | yes | `in-progress` \| `pr-open` \| `merged` |
 | `PATH_TO_BRIEF_MD` | yes | Repo-relative path to `brief.md` |
+| `PATH_TO_PLAN_MD` | yes for `pr-open` / `merged`; preferred for `in-progress` | Repo-relative path to `plan.md` |
+| `PATH_TO_UPDATES_MD` | yes for `pr-open` / `merged`; optional for `in-progress` | Repo-relative path to `updates.md` |
 | `PATH_TO_VERIFY_MD` | no | Repo-relative path to `verify.md` if available |
-| `PR_REF` | no | Product PR number or URL |
+| `PR_REF` | no | Product PR number or URL (required in practice for `in-progress` / `pr-open`) |
 | `MERGE_REF` | no | Merge commit SHA, merge PR URL, or equivalent final merge reference |
-| `RELATED_PATHS` | no | Additional repo-relative docs/research/history inputs that shaped the outcome |
+| `FEATURE_NAME` | no | Topic tag source; infer from WIP / plan headers when omitted |
 | `ENTRY_SLUG` | no | Preferred history entry slug; infer from feature/plan if omitted |
+| `AGENT` | no | Working agent label for in-progress chips (e.g. `blanche`); omit when unknown |
 
 ---
 
@@ -49,153 +54,142 @@ Write into the tracking root history area (`.bindify/history/` or `bindify/histo
 
 Naming guidance for entry files:
 - Use the first generation date as the prefix: `<YYYY-MM-DD>-<slug>.md`
-- Keep the slug stable when refreshing the same history entry after merge
+- Keep the slug stable across `in-progress` → `pr-open` → `merged`
 - If multiple plans roll up into one summary, choose a shared outcome slug rather than a single feature name
+- Never create a second entry for a `plan-fixes/*` draft — refresh the same slug and update `pr`
 
 ---
 
 ## Procedure
 
-1. **Load the execution evidence.**
-   - Read `PATH_TO_UPDATES_MD` as the primary source of implementation evidence.
-   - Read `PATH_TO_PLAN_MD` and `PATH_TO_BRIEF_MD` to recover scope and intended outcome.
-   - Read `PATH_TO_VERIFY_MD` if present to capture human review framing.
-   - Read `RELATED_PATHS` only when they materially shaped the story (research docs, architecture notes, linked feature docs).
+1. **Resolve the tracking root and existing card.**
+   - Detect `.bindify/` then `bindify/`. Stop and ask if neither exists (except when invoked from `publish-plan`, which may skip the card — see that command).
+   - Infer `ENTRY_SLUG` from `FEATURE_NAME` / plan name when omitted.
+   - If `history/entries/*-<slug>.md` already exists, reuse that file (keep its date prefix). Do not fork a new date for status transitions.
 
-2. **Determine the summary scope.**
-   - Identify the main feature or change area.
-   - Detect whether the work affects multiple features, shared modules, or cross-cutting docs.
-   - Decide whether the history entry should name one feature or a broader outcome.
+2. **Load evidence for the mode.**
+   - `in-progress`: read `PATH_TO_BRIEF_MD` (and `PATH_TO_PLAN_MD` when present). Do not require `updates.md`.
+   - `pr-open` / `merged`: read `PATH_TO_UPDATES_MD` as the primary source; also read plan, brief, and `PATH_TO_VERIFY_MD` when present.
 
-3. **Synthesize, do not restate.**
-   - Compress all step entries into a short explanation of the combined result.
-   - Focus on user-facing effect, architecture impact, and important follow-ups.
-   - Do not repeat every step bullet-by-bullet.
-   - Preserve backlinks to the most relevant step entries so readers can drill into the evidence.
+3. **Determine title, tags, and link roles.**
+   - Title: short outcome title (not `History Summary — …`).
+   - Tags: always include `history`; add lowercase topic tags from the feature name / brief (e.g. `auth`).
+   - `plan` / `updates` properties: wikilinks to the current plan and updates files.
+     - While still in `wip-docs/`: `[[plan]]` / `[[updates]]` (or paths that resolve to those WIP files).
+     - After migration: point at the durable `development/...` plan and updates notes.
+   - Architecture link roles (`touches` / `modified` / `created`): empty lists in `in-progress`; fill from Architecture sections in `updates.md` for `pr-open` / `merged`.
 
-4. **Write or refresh the full history entry.**
-   - Create the entry if it does not exist.
-   - If it already exists for the same slug, refresh it in place with the latest status and references.
-   - In `pr-open` mode, status should clearly indicate review/open PR state.
-   - In `merged` mode, status should clearly indicate merged/finalized state.
+4. **Write the card body.**
+   - `in-progress`: two or three sentences stating the intended outcome from the brief.
+   - `pr-open` / `merged`: synthesize the combined result across steps — not a flattened changelog.
+   - After the sentences, list architecture connections as aliased wikilinks only, matching the property lists:
+     - `Touches [[session-store|Session store]].`
+     - `Modified [[…|…]].` / `Created [[…|…]].` when applicable.
+   - No status block, no path rows, no Evidence section, no `## Related` dump. Step evidence stays in `updates.md`.
 
-5. **Update the root index.**
-   - Ensure tracking `history/index.md` exists (under `.bindify/` or `bindify/`).
-   - Add or refresh one compact row/section for this history entry.
-   - Keep the index brief; it is a discovery surface, not a duplicate of the full entry.
+5. **Write or refresh properties.**
+   - `type: history`
+   - `status`: `in-progress` | `pr-open` | `merged` matching `MODE`
+   - `date`: keep the original entry date on refresh; set today only when creating
+   - `pr`: URL string from `PR_REF`, or `""` when absent
+   - `merge`: URL/SHA from `MERGE_REF` in `merged` mode; `""` otherwise
+   - Keep property link lists and body aliases on the same targets
 
-6. **Refresh links.**
-   - Run `update-links` for tracking `history/`.
-   - Ensure the history entry links back to plans, features, step logs, architecture objects, and related docs.
+6. **Rebuild `history/index.md` from all entry properties.**
+   - Ensure the file exists (under `.bindify/` or `bindify/`).
+   - Scan every `history/entries/*.md` frontmatter.
+   - Rebuild three sections only: **In progress**, **In review**, **Done**.
+   - Map status → section: `in-progress` → In progress; `pr-open` → In review; `merged` → Done.
+   - Each item is one line: `[[entries/<file>|Title]] — <topic tags>` plus `· #<pr-number>` and `· <agent>` when those values exist on the card.
+   - Omit empty sections, or leave them with no bullets. Never put path rows or status words in the line body.
 
----
-
-## Full entry requirements
-
-The full history entry is the main human/UI summary and must be understandable without opening `updates.md`.
-
-It should answer, quickly:
-- What happened?
-- Why does it matter?
-- What changed in the architecture?
-- Which features/docs/research were involved?
-- Where can I drill down for evidence?
-
-Mandatory qualities:
-- Short, scannable prose and bullets
-- Combined effect across steps, not a restated changelog
-- Explicit architecture impact
-- Explicit links to evidence and related materials
-- Clear PR/merge state
+7. **Refresh links.**
+   - Run `update-links` for tracking `history/` (history-card rules: sync properties with body aliases; do not add `## Related`).
 
 ---
 
-## Output format: `history/entries/<date>-<slug>.md`
+## Card format: `history/entries/<date>-<slug>.md`
 
 ```markdown
-# History Summary — [Short outcome title]
+---
+type: history
+status: in-progress
+date: YYYY-MM-DD
+tags:
+  - history
+  - <topic>
+pr: "<url or empty>"
+merge: ""
+plan: "[[plan]]"
+updates: "[[updates]]"
+touches:
+  - "[[object-id]]"
+modified: []
+created: []
+---
 
-**Status:** `pr-open` | `merged`
-**Date:** YYYY-MM-DD
-**Plan:** `development/<category>/<feature>/plans/<plan-name>/plan.md`
-**Updates Log:** `development/<category>/<feature>/plans/<plan-name>/updates.md`
-**PR:** <link or `none`>
-**Merge:** <link/SHA or `pending`>
+# Short Outcome Title
 
-## What Changed
-- <2-4 bullets describing the combined outcome>
+Two or three sentences.
 
-## User / Feature Impact
-- <what a human should understand about behavior, product surface, or workflow change>
-
-## Architecture Impact
-- `modified` [[architecture/modules/<object>]] — <what shifted>
-- `touches` [[architecture/data/<object>]] — <why it matters>
-- `created` [[architecture/modules/<object>]] — <if applicable>
-
-## Evidence
-- Step updates: `development/.../updates.md#<step-anchor>` — <why this step matters to the overall story>
-- Plan: `development/.../plan.md`
-- Verify: `development/.../verify.md`
-
-## Related Features and Docs
-- Features: `development/features/<other-feature>/...` — <if cross-feature>
-- Docs/Research: `docs/<path>.md` — <if relevant>
-
-## Follow-ups
-- <only unresolved next actions or `none`>
-
-## Related
-- `[[../../development/.../plan.md]]`
-- `[[../../development/.../updates.md]]`
-- `[[../../development/.../verify.md]]`
-- `[[../index.md]]`
+Touches [[object-id|Object Name]].
 ```
+
+Properties are the contract for Obsidian / agents. The body is what humans read.
 
 ---
 
-## Output format: `history/index.md`
-
-Keep index entries compact. One entry should summarize the summary:
+## Index format: `history/index.md`
 
 ```markdown
-## YYYY-MM-DD — [Short outcome title]
+# History Index
 
-- Status: `pr-open` | `merged`
-- Summary: <1-2 short bullets>
-- Entry: `[[entries/<date>-<slug>.md]]`
-- Plans: `development/.../plan.md`
-- Features/Docs: `<optional cross-links>`
+## In progress
+
+- [[entries/<date>-<slug>|Short Outcome Title]] — `<topic>` · `#<pr>` · `<agent>`
+
+## In review
+
+- [[entries/<date>-<slug>|Short Outcome Title]] — `<topic>` · `#<pr>`
+
+## Done
+
+- [[entries/<date>-<slug>|Short Outcome Title]] — `<topic>`
 ```
 
-Do not copy the full history entry into the index.
+Do not copy the card body into the index. Do not list plan/updates paths.
 
 ---
 
 ## Hard rules
 
-- **Never replace `updates.md` with this summary.** `updates.md` stays the append-only execution ledger.
-- **Write root history only under tracking `history/`** (`.bindify/history/` or `bindify/history/`). Do not place these summaries in feature folders or `wip-docs/`.
-- **One evolving entry per outcome.** Refresh the same entry for `pr-open` → `merged`; do not fork duplicate entries unless the work is genuinely a different outcome.
-- **Synthesize across steps.** If the summary reads like a flattened changelog, it is wrong.
-- **Preserve evidence links.** The summary must point back to plans, step logs, and related docs.
-- **Repo-relative paths only.** No absolute paths in markdown.
+- **Never replace `updates.md` with this card.** `updates.md` stays the append-only execution ledger.
+- **Write root history only under tracking `history/`** (`.bindify/history/` or `bindify/history/`). Do not place these cards in feature folders or `wip-docs/`.
+- **One evolving entry per outcome.** Refresh the same file for `in-progress` → `pr-open` → `merged`; do not fork duplicates for `plan-fixes/*`.
+- **`in-progress` body = intent; later modes = synthesized result.**
+- **No path dumps in the body or index.** Paths belong in properties (`plan`, `updates`, `pr`, `merge`) or stay in `updates.md`.
+- **No `## Related` on history cards.** Properties + aliased body links are the graph edges.
+- **Repo-relative / vault-relative targets only.** No absolute paths in markdown.
 
 ---
 
 ## Acceptance criteria
 
-- A summary entry exists under tracking `history/entries/`.
-- Tracking `history/index.md` contains a compact link to that entry.
-- The entry clearly distinguishes `pr-open` vs `merged` status.
-- The entry links back to the relevant plan and step evidence.
-- The entry can reference multiple features and supporting docs when the outcome is cross-cutting.
+- A card exists under tracking `history/entries/` with YAML properties and a short body.
+- Tracking `history/index.md` groups the card under In progress / In review / Done from its `status`.
+- The same slug is reused across status transitions.
+- `pr-open` / `merged` cards synthesize outcomes and fill architecture link roles; `in-progress` cards use brief intent and may leave those lists empty.
+- Property link lists and body aliases target the same objects.
+- The card does not contain a status block, path rows, Evidence section, or `## Related` dump.
 
 ---
 
 ## Related
 
+- `[[references/templates/history-entry.md]]`
+- `[[references/templates/history-index.md]]`
+- `[[references/commands/publish-plan.md]]`
 - `[[references/commands/summarize-work-for-updates.md]]`
 - `[[references/commands/generate-verify.md]]`
 - `[[references/commands/log-pr.md]]`
-- `[[references/docs/workflow.md]]`
+- `[[references/commands/update-links.md]]`
