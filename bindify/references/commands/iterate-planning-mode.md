@@ -11,7 +11,8 @@ Draft heads this command may lock:
 | Head | After `gh pr ready` |
 |---|---|
 | `plan/<leaf>` | Stop. A separate reviewer runs `review-plan`. Do not commit again on this branch. |
-| `plan-fixes/<leaf>` | Stop. A human reviews this PR. Do not run `review-plan` again. |
+| `plan-iteration-N/<leaf>` | Same as `plan/<leaf>`. Reviewer runs `review-plan`. Do not commit again on this branch. |
+| `plan-fixes/…` | Stop. A human reviews this PR. Do not run `review-plan` again. |
 
 ---
 
@@ -20,17 +21,17 @@ Draft heads this command may lock:
 1. Resolve the draft PR head branch first. Use the PR that triggered this agent when there is one. Otherwise:
    ```bash
    gh pr list --state open --json number,isDraft,headRefName,url \
-     --jq '.[] | select(.isDraft==true and ((.headRefName|startswith("plan/")) or (.headRefName|startswith("plan-fixes/"))))'
+     --jq '.[] | select(.isDraft==true and ((.headRefName|startswith("plan/")) or (.headRefName|startswith("plan-iteration-")) or (.headRefName|startswith("plan-fixes/"))))'
    ```
-   If more than one draft matches, stop and ask. Preferred head = that PR's `headRefName` (`plan/<leaf>` or `plan-fixes/<leaf>` only).
+   If more than one draft matches, stop and ask. Preferred head = that PR's `headRefName` (`plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…` only).
 2. Checkout **exactly** that branch. Do not create anything new.
 3. **Forbidden for the entire command** (including finish path):
    - `git checkout -b` / `git switch -c`
    - creating `feature/...`, `feat/...`, `fix/...`, `plan-fixes/...`, or any branch that is not the existing draft head
    - opening a second PR with a different head
    - appending or editing steps in `plan.md` (`review-plan` is the only command that appends fix steps)
-4. `FEATURE_NAME` / Category `features` in `wip-docs/` are **metadata only** — never git branch names.
-5. If you are not on the triggering draft's `plan/...` or `plan-fixes/...` head, stop and ask. Do not invent a branch.
+4. Do not create `feature/`, `plan/`, or `plan-iteration-N/` here. Those branches belong to `publish-plan`.
+5. If you are not on the triggering draft's `plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…` head, stop and ask. Do not invent a branch.
 6. Every commit and push in this command goes to **that same branch only**.
 7. On `plan-fixes/<leaf>`, refuse a `STEP_ID` that already has an `updates.md` entry. Those steps finished on the plan branch. Run only the appended steps that still lack an entry.
 
@@ -68,7 +69,7 @@ If any required section is missing for `STEP_ID`, stop and report the missing se
 
 Read `references/docs/working-style.md` first. Chat is caveman. Code comments and `updates.md` stay normal prose.
 
-0. **Lock branch** — follow [Branch lock](#branch-lock-non-negotiable). Confirm `git branch --show-current` equals the draft PR `headRefName` and is `plan/<leaf>` or `plan-fixes/<leaf>`.
+0. **Lock branch** — follow [Branch lock](#branch-lock-non-negotiable). Confirm `git branch --show-current` equals the draft PR `headRefName` and is `plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…`.
 1. Read `PATH_TO_PLAN_MD` (default `wip-docs/plan.md`) and locate `STEP_ID` exactly
 2. Validate required schema exists for that step
 3. Check for test failure context:
@@ -119,7 +120,7 @@ Run only when every plan step has an `updates.md` entry. Still on the **same** d
    )"
    ```
 3. Push the **same** branch again
-4. Resolve the draft PR whose **head is this branch** (`publish-plan` for `plan/<leaf>`, `review-plan` for `plan-fixes/<leaf>`):
+4. Resolve the draft PR whose **head is this branch** (`publish-plan` for `plan/<leaf>` and `plan-iteration-N/<leaf>`, `review-plan` for `plan-fixes/…`):
    ```bash
    gh pr list --head "$(git branch --show-current)" --json number,isDraft,url,baseRefName,state,headRefName
    ```
@@ -130,11 +131,11 @@ Run only when every plan step has an `updates.md` entry. Still on the **same** d
      ```
    - Verify afterward: `gh pr view <number> --json isDraft` → `isDraft` must be `false`
    - If an open non-draft PR already exists for this head → leave it; report the URL
-   - If **no** PR exists for this head → stop and ask (do **not** create a new branch). A missing `plan/` draft may be created only with `--head` set to the current `plan/<leaf>` and the known parent/`BASE`. A missing `plan-fixes/` draft belongs to `review-plan` — do not open it here. Never invent `feature/...`
+   - If **no** PR exists for this head → stop and ask (do **not** create a new branch). A missing `plan/` or `plan-iteration-N/` draft may be created only with `--head` set to the current head and the known parent/`BASE` from the publish-plan stack (`feature/<feature-slug>`, or the previous plan/iteration branch). Never use `main` or `release/*` as that base unless the human explicitly said so. A missing `plan-fixes/` draft belongs to `review-plan` — do not open it here. Never create `feature/...`
 6. Report, then stop committing on this branch:
    - Plan complete, verify path, PR URL, and that this draft was switched to ready for review
-   - Head `plan/<leaf>`: a separate reviewer must run `review-plan`. This command does not review and does not open `plan-fixes/`
-   - Head `plan-fixes/<leaf>`: human review only. Do not run `review-plan`
+   - Head `plan/<leaf>` or `plan-iteration-N/<leaf>`: a separate reviewer must run `review-plan`. This command does not review and does not open `plan-fixes/`
+   - Head `plan-fixes/…`: human review only. Do not run `review-plan`
 7. Do **not** migrate into Bindify here — that remains `publish-bindify-pr` / `log-pr` after the product PR exists
 
 ---
@@ -145,7 +146,7 @@ All product commits created by this command (step commits + verify commit):
 
 | Rule | Detail |
 |---|---|
-| Branch | Only the draft PR head (`plan/<leaf>` or `plan-fixes/<leaf>`) — never a new branch |
+| Branch | Only the draft PR head (`plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…`) — never a new branch |
 | Granularity | Exactly **one git commit per `STEP_ID`** |
 | Author | `--author="blanche <blanche@bindify.app>"` |
 | Config | Never run `git config` to change user.name / user.email |
@@ -190,20 +191,20 @@ When executing on a Linux cloud agent (e.g. Cursor Cloud Agents) in a macOS/Appl
 - Mid-plan: leave the publish-plan **draft** PR as draft. Only mark ready when the finish path runs.
 - One commit per step; author is always blanche via `--author` (never change git config)
 - Do not combine multiple steps, or step work + verify, into a single commit
-- **Never create any new git branch.** Commit and push only on the draft PR's existing head (`plan/<leaf>` or `plan-fixes/<leaf>`). `FEATURE_NAME` ≠ branch name. Do not create `plan-fixes/` here.
+- **Never create any new git branch.** Commit and push only on the draft PR's existing head (`plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…`). Do not create `feature/`, `plan/`, `plan-iteration-N/`, or `plan-fixes/` here.
 - Finish path must call `gh pr ready` on **that** draft — do not open a different-head PR.
-- After `gh pr ready` on `plan/<leaf>`, do not commit on that branch again. Later fix commits belong on `plan-fixes/<leaf>`.
+- After `gh pr ready` on `plan/<leaf>` or `plan-iteration-N/<leaf>`, do not commit on that branch again. Later fix commits belong on the `plan-fixes/` branch `review-plan` opens.
 
 ---
 
 ## Acceptance criteria
 
-- Current branch stayed the triggering draft head (`plan/<leaf>` or `plan-fixes/<leaf>`) for the whole run
-- No `feature/` or `plan-fixes/` branch was created by this command
+- Current branch stayed the triggering draft head (`plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…`) for the whole run
+- No `feature/`, `plan/`, `plan-iteration-N/`, or `plan-fixes/` branch was created by this command
 - Each completed step has its own blanche commit on that branch and was pushed
 - On `plan-fixes/`, already-logged steps were not executed again
 - On plan completion: `verify.md` committed, same branch pushed, draft PR marked ready (`isDraft: false`)
-- Ready `plan/*` handed off to `review-plan`; ready `plan-fixes/*` handed off to a human
+- Ready `plan/<leaf>` or `plan-iteration-N/<leaf>` handed off to `review-plan`; ready `plan-fixes/*` handed off to a human
 
 ---
 
@@ -215,7 +216,7 @@ After every step:
 After the last step (finish path):
 - [generate-verify](./generate-verify.md)
 - Same draft PR switched to ready for review (`gh pr ready`)
-- `plan/*` ready → [review-plan](./review-plan.md) (separate agent)
+- `plan/<leaf>` or `plan-iteration-N/<leaf>` ready → [review-plan](./review-plan.md) (separate agent)
 - `plan-fixes/*` ready → human only
 
 ---

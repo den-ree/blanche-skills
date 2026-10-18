@@ -23,14 +23,14 @@ Example — `draft-brief`:
 
 ## Active work vs durable history
 
-- **Active feature docs** live in `wip-docs/` at the **host project root** (flat), on product branch `plan/<plan-name>` after `publish-plan` (reuse existing `plan/` branch; parent may be `release/*` or `feature/*`; opens a **draft** PR).
+- **Active feature docs** live in `wip-docs/` at the **host project root** (flat). `publish-plan` stacks branches: `main` or `release/*` → `feature/<feature-slug>` → `plan/<plan-slug>` (draft PR into the feature branch). Already on `feature/*` → `plan/<plan-slug>` into that feature. Already on a published `plan/` or `plan-iteration-N/` branch → next `plan-iteration-N/<leaf>` into that branch.
 - **Durable history / architecture** live in the Bindify tracking repo at `.bindify/` or `bindify/`.
 - Do **not** write active plan artifacts into tracking `development/` during apply. Migrate via `publish-bindify-pr` / `log-pr` when packaging.
-- `publish-plan` ensures the **product** `plan/` branch + draft PR and upserts an `in-progress` history card under tracking `history/` (not `development/`). It never creates a `feature/` branch from the plan name.
+- `publish-plan` creates that product branch stack, commits `wip-docs/` only on the implementation head, opens the draft PR into the immediate parent, and upserts an `in-progress` history card under tracking `history/` (not `development/`). It creates `feature/<feature-slug>` only from `main` or `release/*`, never from a `plan/` branch.
 - After `publish-plan`, the **planner waits** for the draft PR to become ready for review; a **separate executor** runs `iterate-planning-mode`.
-- Executor stays on the triggering draft head (`plan/<leaf>` or `plan-fixes/<leaf>`): no new branches; all step commits push there; finish path runs `gh pr ready` on that draft.
+- Executor stays on the triggering draft head (`plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/…`): no new branches; all step commits push there; finish path runs `gh pr ready` on that draft.
 - When `iterate-planning-mode` finishes the last unfinished step, it marks that draft PR ready for review and stops committing on that branch.
-- `ready_for_review` on `plan/*` starts a **reviewer** (`review-plan`). In-scope misses become appended steps on `plan-fixes/<leaf>` with one draft PR into the plan branch. Improvements stay PR comments. `ready_for_review` on `plan-fixes/*` does not start another reviewer.
+- `ready_for_review` on `plan/<leaf>` or `plan-iteration-N/<leaf>` starts a **reviewer** (`review-plan`). In-scope misses become appended steps on `plan-fixes/…` with one draft PR into that head (not into `feature/*`, `main`, or `release/*`). Improvements stay PR comments. `ready_for_review` on `plan-fixes/*` does not start another reviewer.
 - Plan-step commits are one-per-step and authored as `blanche <blanche@bindify.app>` via `--author` (never change git config).
 
 ## Hard rules
@@ -46,7 +46,7 @@ Example — `draft-brief`:
 - **Word limits:** Briefs must be ≤ 150 words. Proposals must be ≤ 250 words.
 - **Prototype-first:** User-facing features must implement a mock UI prototype in Step-001 before wiring logic.
 - **WIP location:** Active brief/proposal/plan/updates/verify/coordinator → `wip-docs/` only.
-- **Git branch:** Implementation is `plan/<leaf>`, plus at most one `plan-fixes/<leaf>` created by `review-plan` (draft targets the plan branch). Executors never create a branch. Never create `feature/...`. `FEATURE_NAME` is metadata, not a branch.
+- **Git branch:** `main` or `release/*` → create `feature/<feature-slug>`, then `plan/<plan-slug>` whose draft PR targets the feature branch. On `feature/*`, create only `plan/<plan-slug>` into that feature. On a published `plan/<leaf>` or `plan-iteration-N/<leaf>`, create the next `plan-iteration-N/<leaf>` targeting that branch. `review-plan` alone creates `plan-fixes/…`, targeting the reviewed head. Executors never create a branch. Never create `feature/` from `plan/`, and never open `plan/` into `main` or `release/*`.
 
 ## Cloud & Linux Agent Execution (e.g. Cursor Cloud)
 

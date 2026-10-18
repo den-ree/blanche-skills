@@ -23,24 +23,36 @@ The agent that runs `publish-plan` is the **planner**. It must **not** implement
 | `PLAN_NAME` | no | Infer from WIP headers when omitted |
 | `PATH_TO_PROPOSAL_MD` | no | Defaults to `wip-docs/proposal.md` |
 | `PATH_TO_PLAN_MD` | no | Defaults to `wip-docs/plan.md` |
-| `BRANCH_NAME` | no | Implementation branch. Defaults to `plan/<plan-name>`. Must stay under `plan/` unless the human explicitly overrides |
-| `BASE` | no | Parent branch to fork from / PR base. Defaults to **current branch** when it is a parent branch (`main`, `release/*`, `feature/*`, etc.). Never default to inventing a new `feature/` name |
+| `BRANCH_NAME` | no | Implementation head. Leave empty and follow the branch stack. Set only when the human names an exact head (`plan/<plan-name>` or `plan-iteration-N/<plan-name>`) |
+| `BASE` | no | PR base. Leave empty and follow the branch stack. Set only when the human names the exact base (`feature/<feature-name>`, `plan/<plan-name>`, or `plan-iteration-N/<plan-name>`). Do not default this to `main` or `release/*` |
 | `ALLOW_OVERWRITE` | no | `true` only with explicit human approval if an existing `plan/` branch would be reset |
 | `DRAFT_PR` | no | Defaults to `true`. When `true`, ensure a draft PR exists from the plan branch into `BASE` |
 | `PR_TITLE` | no | Defaults to `Plan: <plan-name>` (or feature + plan from WIP headers) |
 
 ---
 
-## Naming trap (read this)
+## Branch stack (read this)
 
-| Concept | Example | Is a git branch? |
+`publish-plan` does **not** open the implementation PR into `main` or `release/*`. Read `git branch --show-current` and apply one row. Slugs come from WIP headers (`Feature` → feature slug, `Plan` → plan slug), kebab-case.
+
+| Current branch | What to create | Draft PR |
 |---|---|---|
-| WIP metadata `Feature:` / `FEATURE_NAME` | `onboarding-flow` | **No** — folder name after migration only |
-| WIP metadata `Category:` | `features` | **No** |
-| Implementation branch | `plan/onboarding-flow` | **Yes** — only place to commit |
-| Parent / PR base | `main`, `release/1.0.3`, or an **existing** `feature/foo` | **Yes** — fork-from / PR base only; **never create** one here |
+| `main`, `master`, `release`, or `release/*` | `feature/<feature-slug>` from that branch, then `plan/<plan-slug>` from the feature branch | `plan/<plan-slug>` → `feature/<feature-slug>` |
+| `feature/*` | `plan/<plan-slug>` from that feature branch. Do not create another `feature/` | `plan/<plan-slug>` → current `feature/*` |
+| `plan/<leaf>` that **already has a PR**, same plan | `plan-iteration-1/<leaf>`, or the next free `plan-iteration-N/<leaf>` | iteration → `plan/<leaf>` |
+| `plan-iteration-N/<leaf>` that **already has a PR**, same plan | `plan-iteration-(N+1)/<leaf>` | new head → current iteration branch |
+| `plan/<leaf>` or `plan-iteration-N/<leaf>` with **no PR yet**, same plan | Nothing new. Stay on it | into its parent (feature branch, or the previous iteration) |
+| anything else (`develop`, `hotfix/*`, `plan-fixes/*`, a different plan's branch) | Stop and ask | — |
 
-If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. Stay on `plan/`.
+```
+main  or  release/*
+└── feature/onboarding                         ← pushed, no PR in this command
+    └── plan/welcome-screen                    ← draft PR into feature/onboarding
+        └── plan-iteration-1/welcome-screen    ← only after plan/welcome-screen already has a PR
+            └── plan-iteration-2/welcome-screen
+```
+
+`Feature:` is the `feature/<feature-slug>` branch. `Plan:` is the leaf under `plan/` and `plan-iteration-N/`. `Category:` is not a branch. Creating `feature/` from a `plan/` branch is a bug. Opening `plan/` straight into `main` or `release/*` is a bug.
 
 ---
 
@@ -53,23 +65,31 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
    - Resolve `CATEGORY` / `FEATURE_NAME` / `PLAN_NAME` from inputs or WIP headers
    - Run `update-links` for `wip-docs/` if links look stale
 
-2. Resolve implementation branch (`plan/...`)
-   - Target = `BRANCH_NAME` if provided, else `plan/<plan-name>`
-   - If `BRANCH_NAME` is provided and does **not** start with `plan/`, stop and ask (do not silently create `feature/...`)
+2. Resolve the implementation head and its PR base
    - Detect current branch: `git branch --show-current`
-   - **Reuse path (preferred):**
-     - If current branch == target → keep it
-     - Else if target exists locally (`git show-ref --verify refs/heads/<target>`) → checkout target
-     - Else if target exists on remote (`origin/<target>`) → checkout tracking branch for target
-     - Do **not** create a new branch in any of these cases
-   - **Create path (only when target does not exist anywhere):**
-     - Resolve `BASE`:
-       - Use explicit `BASE` if given
-       - Else if current branch is a parent branch (`main`, `master`, `develop`, `release/*`, `feature/*`, `hotfix/*`, or anything **not** starting with `plan/`) → use current branch as `BASE`
-       - Else if current branch is some other `plan/...` → stop and ask which parent to fork from
-     - From `BASE`, create and checkout `plan/<plan-name>`
-   - Never create a branch whose name starts with `feature/` as part of this command
-   - Remember `BASE` for the draft PR even on the reuse path (infer from existing PR if one exists, else from explicit input / prior parent)
+   - Feature branch = `feature/<feature-slug>`. Plan leaf = `<plan-slug>`.
+   - If the human set **both** `BRANCH_NAME` and `BASE`, use those. Still refuse a base of `main`, `master`, `release`, or `release/*` unless the human explicitly said that base. Then skip the stack and continue at the commit step.
+   - Do **not** commit `wip-docs/` until the implementation head is checked out. Creating `feature/` or the next iteration happens first, so the parent does not receive the WIP commit.
+   - **Current branch is `main`, `master`, `release`, or `release/*`:**
+     - If `feature/<feature-slug>` exists locally or on `origin`, check it out. Do not reset it and do not recreate it from the long-lived branch.
+     - Otherwise: `git checkout -b feature/<feature-slug>` from the current branch, then `git push -u origin feature/<feature-slug>`.
+     - Do not commit on the feature branch. Do not open a feature → `main`/`release` PR.
+     - If `plan/<plan-slug>` exists locally or on `origin`, check it out. Otherwise: `git checkout -b plan/<plan-slug>` from the feature tip.
+     - `BASE` = `feature/<feature-slug>`. Implementation head = `plan/<plan-slug>`.
+   - **Current branch is `feature/*`:**
+     - Do not create another feature branch. `BASE` = the current feature branch.
+     - If `plan/<plan-slug>` exists, check it out. Otherwise create it from this feature tip.
+     - Push the feature branch if it is not on `origin` yet.
+   - **Current branch is `plan/<leaf>` or `plan-iteration-N/<leaf>`, and `<leaf>` is this plan:**
+     - Look for an existing PR: `gh pr list --head <current> --json number,url,baseRefName`.
+     - **No PR yet:** stay. This is a retry, not an iteration. If the head is `plan/<leaf>`, `BASE` = `feature/<feature-slug>` (stop and ask if that feature branch does not exist — do not default to `main`). If the head is `plan-iteration-N/<leaf>`, `BASE` is the previous branch in the stack (`plan/<leaf>` when N is 1, otherwise `plan-iteration-(N-1)/<leaf>`).
+     - **PR already exists:** do not commit more planning work on this head. Create the next iteration from the current tip, then check it out before any commit. First name is `plan-iteration-1/<leaf>`. If that name exists locally or on `origin`, use the next free N. `BASE` = the branch you were on. Implementation head = the new iteration branch.
+   - **Current branch is some other `plan/*` or `plan-iteration-*` (different leaf):**
+     - Do not create `plan-iteration-*` for this leaf, and do not branch `plan/<plan-slug>` off the current plan branch.
+     - Check out existing `feature/<feature-slug>` and create or reuse `plan/<plan-slug>` from it. `BASE` = that feature branch.
+     - If `feature/<feature-slug>` does not exist, stop and ask. Never create `feature/` from a `plan/` branch.
+   - **Any other current branch:** stop and ask. Do not invent a base.
+   - Push `feature/<feature-slug>` before opening the plan PR whenever that branch is the base, so the remote ref exists.
 
 3. Stage active WIP on the implementation branch
    - Ensure these exist under `wip-docs/` when present: `brief.md`, `proposal.md`, `plan.md` (and any `plan-v*.md`), `coordinator.md`
@@ -87,21 +107,22 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
      )"
      ```
    - Skip commit if nothing changed
-   - Push the **same** `plan/<plan-name>` branch to remote (`-u` when first publishing)
-   - Do not push a differently named branch
+   - Push the implementation head (`plan/<plan-slug>` or `plan-iteration-N/<plan-slug>`) to remote (`-u` when first publishing)
+   - If `BASE` is `feature/<feature-slug>`, push that feature branch too if it is not already on the remote
+   - Do not push `main` or `release/*`
 
 5. Ensure draft pull request (`DRAFT_PR` default `true`)
-   - Resolve PR base = `BASE` (parent branch). If unknown on reuse path, ask rather than guessing `main` when the user was on `release/*` or `feature/*`.
-   - Check for an existing PR from head `plan/<plan-name>`:
+   - PR base = `BASE` from the branch stack. Never substitute `main` or `release/*` when the stack says `feature/*`, `plan/*`, or `plan-iteration-*`.
+   - Check for an existing PR from the implementation head:
      ```bash
-     gh pr list --head <plan-branch> --json number,isDraft,url,baseRefName
+     gh pr list --head <implementation-head> --json number,isDraft,url,baseRefName
      ```
    - If a PR already exists:
      - Reuse it. If it is not a draft and work has not started review yet, leave it as-is unless the human asks to convert.
      - Report the existing URL (draught or open).
    - If no PR exists, create a **draft**:
      ```bash
-     gh pr create --draft --base <BASE> --head <plan-branch> \
+     gh pr create --draft --base <BASE> --head <implementation-head> \
        --title "<PR_TITLE>" \
        --body "$(cat <<'EOF'
      ## Plan
@@ -136,7 +157,7 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
    - Rebuild the overview via the history-summary index step so the card appears under **In progress**.
 
 7. Return handoff context — then **STOP**
-   - Report implementation branch (`plan/<plan-name>`), parent/`BASE`, whether branch was created or reused
+   - Report implementation head, `BASE`, and whether `feature/`, `plan/`, or `plan-iteration-N/` was created or reused
    - Report **draft PR URL** (or existing PR URL)
    - Report whether the in-progress history card was written / skipped
    - Report `wip-docs/plan.md` as the path the **executor** agent will use
@@ -164,10 +185,12 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 
 - Operate in the **product** git repo for the plan branch / draft PR
 - Tracking exception: after the draft PR URL exists, `history/` under `.bindify/` or `bindify/` may be written and pushed so the vault shows live work — still never touch tracking `development/`
-- Implementation branch must be `plan/...` — never invent `feature/...` from the plan name
-- If `plan/<plan-name>` already exists, reuse it; do not create a sibling or child branch
-- Never create a new branch while already on the matching `plan/` branch
-- Never push plan content directly to parent branches (`main`, `release/*`, `feature/*`)
+- From `main`, `master`, `release`, or `release/*`, create `feature/<feature-slug>` first, then `plan/<plan-slug>` from it. The draft PR base is the feature branch
+- From `feature/*`, create or reuse `plan/<plan-slug>` only. Do not create a second feature branch
+- From a `plan/` or `plan-iteration-N/` branch that already has a PR, the next publish of the **same** plan is `plan-iteration-N/<leaf>` targeting that branch. Do not open another `plan/<leaf>` and do not target `main` or `release/*`
+- A `plan/` or `plan-iteration-N/` head with no PR yet is reused. Do not spawn an iteration just because you are already on it
+- Never create `feature/` from a `plan/` or `plan-iteration-*` branch
+- Never push plan content onto `main`, `release/*`, or `feature/*`
 - Default to a **draft** PR; do not mark ready for review in this command
 - **Planner ≠ executor:** after opening the draft, the publishing agent must wait for ready-for-review — do not implement steps in the same session unless the human explicitly overrides
 - Do not create the plan branch / draft without a reviewed proposal
@@ -181,11 +204,12 @@ If an agent creates `feature/<something>` from a `plan/` branch, that is a bug. 
 
 ## Acceptance criteria
 
-- Checked out branch is `plan/<plan-name>` (or explicit `plan/...` override)
-- No new `feature/...` branch was created by this command
-- If `plan/<plan-name>` already existed, it was reused (not recreated)
-- `wip-docs/` plan artifacts are committed and pushed on that branch
-- A draft PR exists from `plan/<plan-name>` into `BASE` (unless `DRAFT_PR=false`)
+- Checked out branch is the implementation head from the branch stack (`plan/<plan-slug>` or `plan-iteration-N/<plan-slug>`)
+- When the starting branch was `main`, `master`, `release`, or `release/*`, `feature/<feature-slug>` exists, is pushed, and is the draft PR base
+- When the starting branch was a `plan/` or `plan-iteration-N/` branch that already had a PR, the new head is the next `plan-iteration-N/` and the draft PR targets that previous branch
+- No `wip-docs/` commit landed on `main`, `release/*`, or `feature/*`
+- `wip-docs/` plan artifacts are committed and pushed on the implementation head
+- A draft PR exists from that head into `BASE` (unless `DRAFT_PR=false`), and `BASE` is not `main` or `release/*` unless the human explicitly required it
 - When tracking is present, an `in-progress` history card exists under tracking `history/` with the draft PR URL, and the index lists it under **In progress**
 - When tracking is missing, the product draft PR still exists and the handoff reports that the history card was skipped
 - No writes into tracking `development/`

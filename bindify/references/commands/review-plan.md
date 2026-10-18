@@ -2,7 +2,7 @@
 
 Review a plan PR that `iterate-planning-mode` just marked ready. Schedule another implementation round only for misses against the approved plan.
 
-This command is for the **reviewer** agent (usually a ready-for-review trigger on `plan/*`). It does not implement code. The planner stays out of implementation. The executor picks up fix steps only after this command opens a draft.
+This command is for the **reviewer** agent (usually a ready-for-review trigger on `plan/<leaf>` or `plan-iteration-N/<leaf>`). It does not implement code. The planner stays out of implementation. The executor picks up fix steps only after this command opens a draft.
 
 One automatic round. `ready_for_review` on `plan-fixes/*` does not run this command again.
 
@@ -11,7 +11,7 @@ One automatic round. `ready_for_review` on `plan-fixes/*` does not run this comm
 ## When to use
 
 - `iterate-planning-mode` has finished the original plan and switched that draft to ready (`gh pr ready`)
-- The open PR head is `plan/<leaf>` (not `plan-fixes/<leaf>`)
+- The open PR head is `plan/<leaf>` or `plan-iteration-N/<leaf>` (not `plan-fixes/…`)
 - A human or automation asks to review the finished plan before sign-off
 
 Do **not** use this command when:
@@ -40,10 +40,13 @@ In-scope misses on an open plan PR are **not** `log-hotfix`. Hotfix logs are for
 
 | Branch | Who creates it | PR |
 |---|---|---|
-| `plan/<leaf>` | `publish-plan` | Open PR into the parent (`main`, `release/*`, `feature/*`, …) |
-| `plan-fixes/<leaf>` | **this command only** | Draft PR **into** `plan/<leaf>` |
+| `feature/<feature-slug>` | `publish-plan`, from `main` or `release/*` only | No PR in `publish-plan`. It is the base of `plan/<leaf>` |
+| `plan/<leaf>` | `publish-plan` | Draft PR **into** `feature/<feature-slug>` |
+| `plan-iteration-N/<leaf>` | `publish-plan`, only when the previous head already has a PR | Draft PR **into** the previous plan or iteration branch |
+| `plan-fixes/<leaf>` | **this command**, when the reviewed head is `plan/<leaf>` | Draft PR **into** `plan/<leaf>` |
+| `plan-fixes/iteration-N-<leaf>` | **this command**, when the reviewed head is `plan-iteration-N/<leaf>` | Draft PR **into** `plan-iteration-N/<leaf>` |
 
-`<leaf>` is the plan branch with the `plan/` prefix removed. `plan/onboarding-flow` → `plan-fixes/onboarding-flow`. Reuse that leaf. Do not invent a new slug. Do not open the fixes PR into `main` or `release/*`.
+`<leaf>` is the last path segment (`plan/onboarding-flow` and `plan-iteration-1/onboarding-flow` both use leaf `onboarding-flow`). Do not invent a new slug. The fixes PR base is the reviewed head. Never open it into `feature/*`, `main`, or `release/*`.
 
 ---
 
@@ -74,20 +77,22 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
      ```bash
      gh pr view <number> --json number,isDraft,state,url,headRefName,baseRefName
      ```
-   - Continue only when `state` is `OPEN`, `isDraft` is `false`, and `headRefName` starts with `plan/`.
+   - Continue only when `state` is `OPEN`, `isDraft` is `false`, and `headRefName` is `plan/<leaf>` or `plan-iteration-N/<leaf>` (`plan/` is a prefix followed by a single segment; `plan-iteration-` does not match `plan/`).
    - If `headRefName` starts with `plan-fixes/`, stop. Comment that this ready PR is for a human. Do not append steps and do not open another draft.
    - If the PR is still a draft, stop and leave it for the executor.
 
 2. Spend the round at most once
-   - `<leaf>` = `headRefName` with the `plan/` prefix removed
-   - Fixes head = `plan-fixes/<leaf>`
+   - Reviewed head = `headRefName`
+   - If the head is `plan/<leaf>`, fixes head = `plan-fixes/<leaf>`
+   - If the head is `plan-iteration-N/<leaf>`, fixes head = `plan-fixes/iteration-N-<leaf>`
+   - Fixes PR base = the reviewed head, not `feature/*`, `main`, or `release/*`
    - ```bash
-     gh pr list --head "plan-fixes/<leaf>" --state all --json number,state,url
+     gh pr list --head "<fixes-head>" --state all --json number,state,url
      ```
    - If any PR exists (open, merged, or closed), comment on the plan PR that the automatic review round is already used, then stop. Do not append more steps.
 
 3. Review against the approved plan
-   - Check out `plan/<leaf>` at the PR head. Do not commit on this branch.
+   - Check out the reviewed head at the PR head. Do not commit on this branch.
    - Read `brief.md`, `plan.md`, `updates.md`, and `verify.md`
    - Read the PR diff (`gh pr diff <number>`)
    - Split findings into **fix steps** and **noted, not scheduled** using the bar above
@@ -100,19 +105,19 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
    - Do not create a branch. Do not open a PR. Stop. The human reviews the open plan PR.
 
 5. Append fix steps on the fixes branch
-   - Fetch and branch from the current `plan/<leaf>` tip (the open PR head):
+   - Fetch and branch from the reviewed head tip (the open PR head):
      ```bash
      git fetch origin
-     git checkout "plan/<leaf>"
-     git pull --ff-only origin "plan/<leaf>"
+     git checkout "<reviewed-head>"
+     git pull --ff-only origin "<reviewed-head>"
      ```
-   - If `plan-fixes/<leaf>` already exists locally or on `origin`, check it out. Otherwise:
+   - If the fixes head already exists locally or on `origin`, check it out. Otherwise:
      ```bash
-     git checkout -b "plan-fixes/<leaf>"
+     git checkout -b "<fixes-head>"
      ```
    - Do not reset or force-push the fixes branch.
-   - If that branch already contains `**Origin:** review-plan` steps that are not on `plan/<leaf>`, do not append those defects again. Open the draft if it is still missing, then stop.
-   - On `plan-fixes/<leaf>` only, append new steps at the end of `## Execution Steps` (before `## Related` when that section exists).
+   - If that branch already contains `**Origin:** review-plan` steps that are not on the reviewed head, do not append those defects again. Open the draft if it is still missing, then stop.
+   - On the fixes head only, append new steps at the end of `## Execution Steps` (before `## Related` when that section exists).
    - Number from the next free `Step-###`. Never renumber or rewrite earlier steps.
    - One step per distinct defect. Each step is the minimum fix and must include `Goal`, `Inputs/Dependencies`, `Implementation Tasks`, `Expected Outputs`, and `Done Criteria`.
    - `Goal` names the missed criterion. `Inputs/Dependencies` cites the plan step or brief criterion it repairs.
@@ -132,16 +137,16 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
      ```
    - `git push -u origin HEAD`
 
-7. Open one draft into the plan branch
-   - Base is `plan/<leaf>`. Head is `plan-fixes/<leaf>`.
+7. Open one draft into the reviewed head
+   - Base is the reviewed head (`plan/<leaf>` or `plan-iteration-N/<leaf>`). Head is the fixes branch from step 2.
    - If that draft already exists, report its URL and stop.
    - ```bash
-     gh pr create --draft --base "plan/<leaf>" --head "plan-fixes/<leaf>" \
+     gh pr create --draft --base "<reviewed-head>" --head "<fixes-head>" \
        --title "Plan fixes: <leaf>" \
        --body "$(cat <<'EOF'
      ## Plan fixes
      - Plan: <leaf>
-     - Base: `plan/<leaf>`
+     - Base: `<reviewed-head>`
      - Source PR: <plan PR url>
      - Automatic review round: 1 of 1
 
@@ -170,7 +175,7 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
 9. Stop
    - Do not run `iterate-planning-mode`
    - Do not mark the fixes draft ready
-   - Do not commit anything else on `plan/<leaf>`
+   - Do not commit anything else on the reviewed head
 
 ---
 
@@ -193,15 +198,15 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
 
 ## Guardrails
 
-- Only `review-plan` may create `plan-fixes/<leaf>`
-- Never create `feature/...`, and never open the fixes PR into the parent of `plan/<leaf>`
+- Only `review-plan` may create a `plan-fixes/` branch
+- Never create `feature/...` or `plan-iteration-N/...` here, and never open the fixes PR into `feature/*`, `main`, or `release/*`
 - Never edit completed steps, `updates.md`, or `verify.md` in this command
 - Never implement the fix in this command
 - Never start a second automatic round
 - Never schedule improvements as steps
 - Do not write `hotfixes.md` or anything under tracking `development/`
 - Tracking exception: may refresh the same history card under tracking `history/` after the fixes draft URL exists
-- After the plan PR is open, leave `plan/<leaf>` frozen so the fixes append merges cleanly
+- After the plan PR is open, leave the reviewed head frozen so the fixes append merges cleanly
 - Use repo-relative paths only. No source code in `plan.md`
 
 ---
@@ -212,7 +217,7 @@ Read `references/docs/working-style.md` first. Chat is caveman. `plan.md`, the c
 - Improvements are comments, not steps
 - Either:
   - no fixes branch and a clean-review comment on the plan PR, or
-  - `plan-fixes/<leaf>` exists, contains only appended steps, and has one draft PR whose base is `plan/<leaf>`
+  - the fixes branch exists (`plan-fixes/<leaf>` or `plan-fixes/iteration-N-<leaf>`), contains only appended steps, and has one draft PR whose base is the reviewed head
 - Existing `Step-###` sections are unchanged
 - No second `plan-fixes/` PR was opened when one already existed for that leaf
 - When a fixes draft was opened and tracking is present, the existing history card stayed one file, `status: in-progress`, with `pr` updated to the fixes draft URL

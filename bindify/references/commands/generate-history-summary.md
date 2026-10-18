@@ -22,7 +22,7 @@ Use the skill template `references/templates/history-entry.md` for the card shap
 - The UI / Obsidian vault needs a clean card instead of the raw step log
 
 Typical timing:
-- `in-progress` mode: right after the draft `plan/*` (or `plan-fixes/*`) PR URL exists
+- `in-progress` mode: right after the draft `plan/<leaf>`, `plan-iteration-N/<leaf>`, or `plan-fixes/*` PR URL exists
 - `pr-open` mode: after the plan PR is ready for review, once `verify.md` exists
 - `merged` mode: after the branch is merged to `main`
 
