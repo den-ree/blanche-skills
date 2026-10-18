@@ -115,6 +115,7 @@ human + agent dialogue
 | `summarize-work-for-updates` | Append step results to `updates.md` |
 | `generate-verify` | Build a human verification checklist |
 | `investigate` | Look up prior fixes in `.bindify/` before code research; seed a later brief |
+| `regenerate-overview` | Rebuild the history dashboard from the tracking vault |
 | `research-codebase` | Research before proposing |
 
 ### Two placements (+ WIP)
