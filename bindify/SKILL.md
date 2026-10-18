@@ -41,6 +41,7 @@ These commands drive bindify. Each one is a self-contained markdown file in `ref
 | "scan the architecture" / "build the architecture map" / missing arch object | `scan-architecture` | `references/commands/scan-architecture.md` |
 | "log this PR" / ingest a PR into the tracking history | `log-pr` | `references/commands/log-pr.md` |
 | "generate the final summary" / "refresh history after PR" / "prepare the UI summary" / draft-PR in-progress card | `generate-history-summary` | `references/commands/generate-history-summary.md` |
+| "refresh the overview" / "open the overview" / rebuild the history dashboard | `regenerate-overview` | `references/commands/regenerate-overview.md` |
 | "open a bindify PR" / publish logs to the `.bindify` submodule | `publish-bindify-pr` | `references/commands/publish-bindify-pr.md` |
 | All steps done, ready for human review | `generate-verify` | `references/commands/generate-verify.md` |
 | "investigate this" / "what did we already fix" / research a feature or fix before a brief | `investigate` | `references/commands/investigate.md` |
@@ -253,7 +254,7 @@ Each PR is a unit of change. The vision flow:
 7. Once the product PR is ready/merged as appropriate, `log-pr` / `publish-bindify-pr` **migrates** `wip-docs/` into the Bindify tracking repo under `development/<category>/<feature>/plans/<plan>/`, merges `coordinator.md`, rewrites the history card's `plan` / `updates` links off `wip-docs/`, and deletes `wip-docs/`.
 8. `generate-history-summary` refreshes the same root history card in `pr-open` mode and rebuilds `history/index.md` under **In review**.
 9. `log-pr` records alignment against `standard`/`pattern` objects and runs `scan-architecture fill`.
-10. After merge, `generate-history-summary` runs again in `merged` mode so the card moves to **Done**.
+10. After merge, `generate-history-summary` runs again in `merged` mode so the card moves to **Done**. Each history-summary run also rebuilds `<tracking-root>/overview.html`.
 11. `publish-bindify-pr` opens a PR to the Bindify submodule with the migrated logs + architecture updates (history may already be on tracking `main` from earlier status writes).
 
 ## Hard rules

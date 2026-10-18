@@ -106,6 +106,10 @@ Naming guidance for entry files:
 7. **Refresh links.**
    - Run `update-links` for tracking `history/` (history-card rules: sync properties with body aliases; do not add `## Related`).
 
+8. **Rebuild the overview.**
+   - Run `regenerate-overview` with `OPEN` false.
+   - The dashboard is written to `<tracking-root>/overview.html` from the history cards and architecture graph just written.
+
 ---
 
 ## Card format: `history/entries/<date>-<slug>.md`
@@ -181,6 +185,7 @@ Do not copy the card body into the index. Do not list plan/updates paths.
 - `pr-open` / `merged` cards synthesize outcomes and fill architecture link roles; `in-progress` cards use brief intent and may leave those lists empty.
 - Property link lists and body aliases target the same objects.
 - The card does not contain a status block, path rows, Evidence section, or `## Related` dump.
+- `<tracking-root>/overview.html` was regenerated after the card and index write.
 
 ---
 
@@ -193,3 +198,4 @@ Do not copy the card body into the index. Do not list plan/updates paths.
 - `[[references/commands/generate-verify.md]]`
 - `[[references/commands/log-pr.md]]`
 - `[[references/commands/update-links.md]]`
+- `[[references/commands/regenerate-overview.md]]`
